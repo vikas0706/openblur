@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="editor_undo">Undo</string>
+    <string name="editor_redo">Redo</string>
+    <string name="editor_more">More options</string>
+    <string name="editor_save_video">Save video</string>
+    <string name="editor_rescan">Scan again, more thoroughly</string>
+    <string name="editor_rescan_title">Scan again, more thoroughly?</string>
+    <string name="editor_rescan_text">A thorough scan takes longer than the first one. You lose the choices you made for this video so far.</string>
+    <string name="editor_rescan_confirm">Scan again</string>
+    <string name="editor_rescan_dismiss">Keep editing</string>
+
+    <string name="editor_preview">Video preview</string>
+    <string name="editor_preparing">Opening the video</string>
+    <string name="editor_player_error_title">The preview stopped</string>
+    <string name="editor_player_error_text">This phone could not play the video here. Your choices are kept.</string>
+    <string name="editor_source_gone_title">This video can\'t be opened</string>
+    <string name="editor_source_gone_text">It may have been moved or deleted, or OpenBlur may no longer be allowed to read it. Your choices are kept.</string>
+    <string name="editor_try_again">Try again</string>
+    <string name="editor_preview_stale">The preview could not show your last change. Change something again, or go back and reopen the video.</string>
+    <string name="editor_save_failed">OpenBlur could not store your choices on this phone. They still apply if you save the video now.</string>
+
+    <string name="editor_play">Play</string>
+    <string name="editor_pause">Pause</string>
+    <string name="editor_step_back">Back one frame</string>
+    <string name="editor_step_forward">Forward one frame</string>
+    <string name="editor_mute">Mute sound</string>
+    <string name="editor_unmute">Turn sound on</string>
+    <string name="editor_scrubber">Position in the video</string>
+    <string name="editor_time_of_total">%1$s of %2$s</string>
+    <string name="editor_time_separator">/</string>
+
+    <string name="editor_tabs">Editing tools</string>
+    <string name="editor_tab_people">People</string>
+    <string name="editor_tab_style">Style</string>
+    <string name="editor_tab_areas">Areas</string>
+
+    <string name="editor_person">Person %1$d</string>
+    <string name="editor_blur_everyone">Blur everyone</string>
+    <string name="editor_show_everyone">Show everyone</string>
+    <string name="editor_people_hint">Tap a face to blur or show that person. Press and hold a face in the video to give them their own style.</string>
+    <plurals name="editor_appearances">
+        <item quantity="one">%1$d appearance</item>
+        <item quantity="other">%1$d appearances</item>
+    </plurals>
+    <string name="editor_open_appearances">Appearances of %1$s</string>
+    <string name="editor_close_appearances">Back to all people</string>
+    <string name="editor_appearances_hint">Each row is one stretch of the video with this face in it. If one of them is someone else, switch that row on its own.</string>
+    <string name="editor_range">%1$s to %2$s</string>
+    <string name="editor_go_to_moment">Go to this moment</string>
+    <string name="editor_blur_toggle">Blur</string>
+    <string name="editor_blur_appearance">Blur %1$s from %2$s</string>
+    <string name="editor_change_person_style">Change this person\'s style</string>
+    <plurals name="editor_on_screen_seconds">
+        <item quantity="one">On screen for %1$d second</item>
+        <item quantity="other">On screen for %1$d seconds</item>
+    </plurals>
+    <string name="editor_on_screen_time">On screen for %1$s</string>
+    <string name="editor_on_screen_brief">On screen for less than a second</string>
+    <string name="editor_brief_faces">Brief faces</string>
+    <plurals name="editor_brief_count">
+        <item quantity="one">%1$d face seen for less than a second</item>
+        <item quantity="other">%1$d faces seen for less than a second</item>
+    </plurals>
+    <string name="editor_brief_blur_all">Blur all brief faces</string>
+    <string name="editor_show">Show</string>
+    <string name="editor_hide">Hide</string>
+    <string name="editor_no_faces_title">No faces found</string>
+    <string name="editor_no_faces_text">The scan found no faces in this video. You can scan again more thoroughly, which takes longer, or cover something yourself with an area.</string>
+    <string name="editor_no_faces_rescan">Scan more thoroughly</string>
+    <string name="editor_no_faces_area">Add an area</string>
+
+    <string name="editor_style_for_everyone">Applies to everyone</string>
+    <string name="editor_style_for_one">Applies to %1$s only</string>
+    <string name="editor_style_everyone_hint">To style one person, press and hold their face in the video. To style an area, pick it in Areas.</string>
+    <string name="editor_style_change_everyone">Change everyone instead</string>
+    <string name="editor_style_reset_person">Use everyone\'s style</string>
+    <string name="editor_style_own">This person has their own style.</string>
+    <string name="editor_style_follows">This person follows everyone\'s style until you change something here.</string>
+    <string name="editor_style_heading">Style</string>
+    <string name="editor_style_blur">Blur</string>
+    <string name="editor_style_mosaic">Mosaic</string>
+    <string name="editor_style_solid">Solid</string>
+    <string name="editor_shape_heading">Shape</string>
+    <string name="editor_shape_oval">Oval</string>
+    <string name="editor_shape_rect">Rectangle</string>
+    <string name="editor_shape_eyes">Eyes</string>
+    <string name="editor_strength">Strength</string>
+    <string name="editor_size">Size</string>
+    <string name="editor_percent">%1$d%%</string>
+    <string name="editor_color_heading">Colour</string>
+    <string name="editor_color_black">Black</string>
+    <string name="editor_color_white">White</string>
+    <string name="editor_color_grey">Grey</string>
+
+    <string name="editor_area">Area %1$d</string>
+    <string name="editor_areas_intro">Use an area for what the scan can\'t find: a face it missed, a number plate, a screen.</string>
+    <string name="editor_add_area">Add area</string>
+    <string name="editor_area_whole_video">Whole video</string>
+    <string name="editor_area_hidden_now">Not shown at this moment</string>
+    <string name="editor_area_starts_here">Starts here</string>
+    <string name="editor_area_ends_here">Ends here</string>
+    <string name="editor_area_follow">Follow motion</string>
+    <string name="editor_area_follow_hint">With Follow motion on, go to another moment and drag the area back over what it should cover. The area moves between the positions you set.</string>
+    <string name="editor_area_drag_hint">Drag the area in the video to move it, or drag a corner to resize it.</string>
+    <string name="editor_area_delete">Delete area</string>
+    <string name="editor_area_positions">Positions</string>
+    <string name="editor_area_position_at">Position at %1$s</string>
+    <string name="editor_area_position_remove">Remove the position at %1$s</string>
+    <string name="editor_area_place_heading">Place and size</string>
+    <string name="editor_area_x">Left to right</string>
+    <string name="editor_area_y">Top to bottom</string>
+    <string name="editor_area_width">Width</string>
+    <string name="editor_area_height">Height</string>
+
+    <string name="editor_said_person_blurred">%1$s, blurred</string>
+    <string name="editor_said_person_visible">%1$s, not blurred</string>
+    <string name="editor_said_person_mixed">%1$s, blurred in some appearances</string>
+    <string name="editor_said_appearance_blurred">Appearance blurred</string>
+    <string name="editor_said_appearance_visible">Appearance not blurred</string>
+    <string name="editor_said_everyone_blurred">Everyone blurred</string>
+    <string name="editor_said_everyone_visible">Everyone shown</string>
+    <string name="editor_said_brief_blurred">Brief faces blurred</string>
+    <string name="editor_said_brief_visible">Brief faces shown</string>
+    <string name="editor_said_selected">%1$s selected</string>
+    <string name="editor_said_selection_cleared">Nothing selected</string>
+    <string name="editor_said_area_added">%1$s added</string>
+    <string name="editor_said_area_deleted">%1$s deleted</string>
+    <string name="editor_said_undone">Undone</string>
+    <string name="editor_said_redone">Redone</string>
+</resources>

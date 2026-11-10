@@ -26,4 +26,12 @@ kotlin {
 dependencies {
     implementation(project(":api"))
     implementation(libs.androidx.media3.effect)
+
+    testImplementation(libs.junit)
+
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.rules)
 }

@@ -23,6 +23,8 @@ dependencies {
 tasks.test {
     useJUnit()
     maxHeapSize = "2g"
+    // The allocation test must see every object sample() creates, including ones the JIT could optimise away.
+    jvmArgs("-XX:+IgnoreUnrecognizedVMOptions", "-XX:-DoEscapeAnalysis")
     systemProperty("openblur.modelsDir", rootProject.file("models").absolutePath)
     systemProperty("openblur.referenceModelsDir", rootProject.file("_dl/models").absolutePath)
     testLogging {

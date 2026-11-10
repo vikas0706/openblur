@@ -9,7 +9,8 @@ android {
 
     defaultConfig {
         minSdk = 26
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Installs TestShellApp as the Application, so MainActivity finds a ShellHost without the app module.
+        testInstrumentationRunner = "io.github.vikas0706.openblur.shell.ShellTestRunner"
     }
 
     compileOptions {
@@ -19,6 +20,23 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    // The flow tests run twice from one folder: on the JVM under Robolectric and on a device.
+    sourceSets {
+        named("test") { kotlin.directories += "src/sharedTest/kotlin" }
+        named("androidTest") { kotlin.directories += "src/sharedTest/kotlin" }
+    }
+
+    testOptions {
+        unitTests {
+            // Robolectric needs the merged resources and manifest to start MainActivity.
+            isIncludeAndroidResources = true
+            all { test ->
+                // Robolectric's Android 16 image reaches into this JDK-internal package through reflection.
+                test.jvmArgs("--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
+            }
+        }
     }
 }
 
@@ -44,6 +62,10 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.androidx.test.core)
+    testImplementation("org.robolectric:robolectric:4.17")
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

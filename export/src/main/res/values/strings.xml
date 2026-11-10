@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="openblur_export_channel_name">Saving videos</string>
+    <string name="openblur_export_channel_description">Shows progress while OpenBlur saves a blurred copy, and tells you when it is done.</string>
+
+    <string name="openblur_export_running_title">Saving a blurred copy</string>
+    <string name="openblur_export_running_percent"><xliff:g id="percent" example="42" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">%1$d</xliff:g>%%</string>
+    <string name="openblur_export_action_cancel">Cancel</string>
+
+    <string name="openblur_export_saved_title">Blurred copy saved</string>
+    <string name="openblur_export_saved_text"><xliff:g id="file_name" example="clip.mp4" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">%1$s</xliff:g> is in Movies/OpenBlur.</string>
+
+    <string name="openblur_export_failed_title">Could not save the blurred copy</string>
+    <string name="openblur_export_failed_text"><xliff:g id="file_name" example="clip.mp4" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">%1$s</xliff:g> was not saved. Open OpenBlur to try again.</string>
+</resources>

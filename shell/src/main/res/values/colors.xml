@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="shell_icon_background">#0E0F11</color>
+    <color name="shell_icon_head">#F2F3F5</color>
+    <color name="shell_icon_mosaic">#FFB020</color>
+    <color name="shell_icon_mosaic_deep">#C98300</color>
+</resources>

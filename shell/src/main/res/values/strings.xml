@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OpenBlur</string>
+
+    <string name="action_try_again">Try again</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_close">Close</string>
+    <string name="value_unknown">Unknown</string>
+    <string name="value_none">None</string>
+    <string name="video_fallback_name">Video</string>
+
+    <string name="format_resolution">%1$d x %2$d</string>
+    <string name="format_frame_rate">%1$s fps</string>
+    <string name="format_mbps">%1$s Mbps</string>
+    <string name="format_kbps">%1$s kbps</string>
+    <string name="format_kb">%1$s kB</string>
+    <string name="format_mb">%1$s MB</string>
+    <string name="format_gb">%1$s GB</string>
+    <string name="format_about">about %1$s</string>
+    <string name="format_percent">%1$d%%</string>
+    <string name="format_bit_depth">%1$s, %2$d-bit</string>
+
+    <string name="fact_name">Name</string>
+    <string name="fact_resolution">Resolution</string>
+    <string name="fact_frame_rate">Frame rate</string>
+    <string name="fact_duration">Duration</string>
+    <string name="fact_codec">Codec</string>
+    <string name="fact_bitrate">Bitrate</string>
+    <string name="fact_audio">Audio</string>
+    <string name="fact_file_size">File size</string>
+    <string name="fact_hdr">HDR</string>
+    <string name="fact_estimated_size">Estimated size</string>
+
+    <string name="hdr_none">No</string>
+    <string name="hdr_hlg">HLG</string>
+    <string name="hdr_pq">HDR10 (PQ)</string>
+    <string name="hdr_dolby_vision">%1$s with Dolby Vision</string>
+
+    <string name="home_headline">Blur faces in a video</string>
+    <string name="home_body">OpenBlur finds the faces in a video. You choose which ones to blur, and it saves a blurred copy. The original video is not changed.</string>
+    <string name="home_choose_video">Choose a video</string>
+    <string name="home_no_network">OpenBlur has no network permission, so it cannot upload your videos.</string>
+    <string name="home_about">About</string>
+    <string name="home_projects_heading">Scanned videos</string>
+    <string name="home_projects_loading">Loading your scanned videos</string>
+    <string name="home_projects_empty">No scanned videos yet. After you choose a video and the scan finishes, it appears here, and you can open it again without another scan.</string>
+    <string name="home_projects_error">Your scanned videos could not be loaded.</string>
+    <string name="home_notice_project_missing">That scan could not be opened. The video may have been moved or deleted. Choose the video again to scan it.</string>
+    <string name="home_notice_delete_failed">The scan could not be deleted.</string>
+    <string name="home_notice_no_picker">This phone has no app for choosing a video. Open the video in a file manager or gallery app and share it to OpenBlur.</string>
+    <string name="home_notice_busy">OpenBlur is still working on another video, so the new one was not opened. Finish or cancel the current video first.</string>
+    <string name="project_open">Open %1$s</string>
+    <string name="project_delete">Delete the scan of %1$s</string>
+    <string name="project_meta">%1$s, %2$s</string>
+    <string name="project_no_people">no faces found</string>
+    <plurals name="project_people">
+        <item quantity="one">%d person</item>
+        <item quantity="other">%d people</item>
+    </plurals>
+    <string name="delete_title">Delete this scan?</string>
+    <string name="delete_text">The scan of %1$s and your blur choices for it will be deleted. The video itself stays on your phone.</string>
+    <string name="delete_confirm">Delete scan</string>
+    <string name="delete_dismiss">Keep scan</string>
+
+    <string name="opening_title">Opening the scan</string>
+    <string name="opening_progress">Loading the scan</string>
+
+    <string name="scan_title">Scanning for faces</string>
+    <string name="scan_title_thorough">Scanning again, more thoroughly</string>
+    <string name="scan_title_failed">Scan stopped</string>
+    <string name="scan_progress_description">Scan progress</string>
+    <string name="scan_stage_reading">Reading the video</string>
+    <string name="scan_stage_saving">Saving the scan</string>
+    <plurals name="scan_frames">
+        <item quantity="one">%d frame checked</item>
+        <item quantity="other">%d frames checked</item>
+    </plurals>
+    <plurals name="scan_faces">
+        <item quantity="one">%d face found so far</item>
+        <item quantity="other">%d faces found so far</item>
+    </plurals>
+    <string name="scan_video_heading">This video</string>
+    <string name="scan_keep_open">Keep this screen open. The scan can stop if you switch to another app.</string>
+    <string name="scan_cancel">Cancel scan</string>
+    <string name="scan_cancel_title">Stop scanning this video?</string>
+    <string name="scan_cancel_text">The scan so far will be discarded.</string>
+    <string name="scan_cancel_confirm">Stop scan</string>
+    <string name="scan_cancel_dismiss">Keep scanning</string>
+    <string name="scan_retry">Scan again</string>
+    <string name="scan_choose_another">Choose another video</string>
+    <string name="scan_back_to_editor">Back to the editor</string>
+    <string name="scan_fail_unreadable_title">This video cannot be opened</string>
+    <string name="scan_fail_unreadable_text">OpenBlur found no video it can read in this file. The file may be damaged, or in a format this phone does not support. Try another video.</string>
+    <string name="scan_fail_decoder_title">This phone could not decode the video</string>
+    <string name="scan_fail_decoder_text">The phone\'s video decoder stopped while reading the file. Close other apps that use the camera or play video, then scan again.</string>
+    <string name="scan_fail_model_title">The face detector could not start</string>
+    <string name="scan_fail_model_text">The face detection model inside the app failed to load or run. Close OpenBlur, open it again and scan again. If this keeps happening, reinstall the app.</string>
+    <string name="scan_fail_memory_title">The phone ran out of memory</string>
+    <string name="scan_fail_memory_text">Close other apps, then scan again.</string>
+    <string name="scan_fail_save_title">The scan could not be saved</string>
+    <string name="scan_fail_save_text">Free some storage space on this phone, then scan again.</string>
+    <string name="scan_fail_unknown_title">The scan stopped unexpectedly</string>
+    <string name="scan_fail_unknown_text">Scan again. If it stops at the same point, the file may be damaged.</string>
+
+    <string name="sheet_title">Save a blurred copy</string>
+    <string name="sheet_plan_heading">What will be saved</string>
+    <string name="sheet_plan_loading">Checking what this phone can encode</string>
+    <string name="sheet_plan_failed">OpenBlur could not check this phone\'s video encoders.</string>
+    <string name="sheet_no_plan_title">This phone cannot encode this video</string>
+    <string name="sheet_no_plan_text">No video encoder on this phone accepts this video\'s size and format, so OpenBlur cannot save a blurred copy here.</string>
+    <string name="sheet_audio_copied">Copied unchanged</string>
+    <string name="sheet_audio_reencoded">Encoded again</string>
+    <string name="sheet_audio_none">This video has no audio</string>
+    <string name="sheet_hdr_kept">Kept</string>
+    <string name="sheet_hdr_converted">Converted to standard dynamic range</string>
+    <string name="sheet_differences_heading">What will differ from the original</string>
+    <string name="sheet_quality_heading">Quality</string>
+    <string name="sheet_quality_match">Match the original</string>
+    <string name="sheet_quality_maximum">Higher bitrate</string>
+    <string name="sheet_quality_match_text">Uses a bitrate a little above the original.</string>
+    <string name="sheet_quality_maximum_text">Uses about twice the original bitrate. The file is larger.</string>
+    <string name="sheet_remove_location">Remove location data</string>
+    <string name="sheet_remove_location_text">The original records where it was filmed. Turn this on to leave that out of the copy.</string>
+    <string name="sheet_nothing_blurred">Nothing is set to blur. The copy would show everything the original shows.</string>
+    <string name="sheet_destination">The copy is saved to this phone\'s video library as %1$s. The original is not changed.</string>
+    <string name="sheet_save">Save blurred video</string>
+    <string name="sheet_problem_prepare">OpenBlur could not prepare the blur for this video. Close this sheet and open it again.</string>
+    <string name="sheet_problem_storage">On this version of Android, OpenBlur needs the storage permission to save the copy. Allow it when asked, or in the app\'s settings, then save again.</string>
+    <string name="sheet_problem_start">The export did not start. Save again.</string>
+    <string name="sheet_empty_title">Save without any blur?</string>
+    <string name="sheet_empty_text">No face or area is set to blur, so the saved video will show everything the original shows.</string>
+    <string name="sheet_empty_confirm">Save without blur</string>
+    <string name="sheet_empty_dismiss">Go back</string>
+    <string name="export_file_name">%1$s blurred</string>
+
+    <string name="notice_codec_h264">The copy uses the H.264 codec, because this phone cannot encode the original\'s codec at this size.</string>
+    <string name="notice_codec_hevc">The copy uses the HEVC codec, because this phone cannot encode the original\'s codec at this size.</string>
+    <string name="notice_hdr_tone_mapped">The original is HDR. The copy is standard dynamic range, because this phone cannot encode this HDR format. Bright areas and colours can look different.</string>
+    <string name="notice_dolby_vision">The original\'s Dolby Vision data is left out of the copy.</string>
+    <string name="notice_ten_bit">The original has 10-bit colour. The copy has 8-bit colour, which can show banding in smooth areas such as sky.</string>
+    <string name="notice_extra_audio">The original has more than one audio track. The copy keeps only the first.</string>
+    <string name="notice_audio_reencoded">The audio is encoded again instead of copied, so it is not identical to the original\'s audio.</string>
+    <string name="notice_size_adjusted">This phone\'s encoder may save a picture size that differs from the original.</string>
+    <string name="notice_bitrate_capped">The bitrate is limited to the highest value this phone\'s encoder accepts.</string>
+    <string name="notice_slow">This phone\'s encoder does not state that it can keep up with this size and frame rate. Saving can take longer than the video lasts.</string>
+
+    <string name="export_title">Saving your video</string>
+    <string name="export_progress_description">Export progress</string>
+    <string name="export_phase_preparing">Getting ready</string>
+    <string name="export_phase_encoding">Blurring and encoding</string>
+    <string name="export_phase_saving">Writing the file</string>
+    <string name="export_elapsed">Elapsed %1$s</string>
+    <string name="export_remaining_soon">Less than a minute left</string>
+    <plurals name="export_remaining_minutes">
+        <item quantity="one">About %d minute left</item>
+        <item quantity="other">About %d minutes left</item>
+    </plurals>
+    <string name="export_remaining_hours">About %1$d h %2$d min left</string>
+    <string name="export_background">You can switch to other apps. The export keeps running.</string>
+    <string name="export_cancel">Cancel export</string>
+    <string name="export_cancel_title">Cancel this export?</string>
+    <string name="export_cancel_text">The part of the video encoded so far will be discarded. Your blur choices are kept.</string>
+    <string name="export_cancel_confirm">Cancel export</string>
+    <string name="export_cancel_dismiss">Keep exporting</string>
+
+    <string name="result_saved_title">Video saved</string>
+    <string name="result_saved_as">Saved as %1$s</string>
+    <string name="result_took">The export took %1$s.</string>
+    <string name="result_play">Play</string>
+    <string name="result_pause">Pause</string>
+    <string name="result_position">Position</string>
+    <string name="result_position_value">%1$s / %2$s</string>
+    <string name="result_player_description">The saved video</string>
+    <string name="result_player_error">The saved video cannot be played here. Open it in another app to check it.</string>
+    <string name="result_compare_heading">Compare with the original</string>
+    <string name="result_column_original">Original</string>
+    <string name="result_column_saved">Saved copy</string>
+    <string name="result_compare_spoken">%1$s. Original: %2$s. Saved copy: %3$s.</string>
+    <string name="result_audio_copied">%1$s, copied unchanged</string>
+    <string name="result_audio_reencoded">%1$s, encoded again</string>
+    <string name="result_differences_heading">What differs from the original</string>
+    <string name="result_no_differences">The export reported no differences from the original. The table above shows what was read back from the saved file.</string>
+    <string name="result_share">Share video</string>
+    <string name="result_open_external">Open in another app</string>
+    <string name="result_back_to_editor">Back to the editor</string>
+    <string name="result_blur_another">Blur another video</string>
+    <string name="result_no_app">No app on this phone can open this video.</string>
+    <string name="result_failed_title">Video not saved</string>
+    <string name="result_what_to_do">What you can do</string>
+    <string name="result_copy_details">Copy details</string>
+    <string name="result_details_copied">Details copied. Paste them into a bug report.</string>
+    <string name="result_details_label">OpenBlur export error</string>
+    <string name="result_cancelled_title">Export cancelled</string>
+    <string name="result_cancelled_text">No video was saved. Your blur choices are still in the editor.</string>
+
+    <string name="failure_no_encoder">This phone has no video encoder that can save this video.</string>
+    <string name="failure_no_encoder_advice">No setting in OpenBlur changes this. A different phone may be able to export the video.</string>
+    <string name="failure_source">The original video could not be read.</string>
+    <string name="failure_source_advice">Check that the video is still on this phone and has not been moved or deleted, then export again.</string>
+    <string name="failure_decoder">This phone\'s video decoder stopped during the export.</string>
+    <string name="failure_decoder_advice">Close other apps that use the camera or play video, then export again.</string>
+    <string name="failure_encoder">This phone\'s video encoder stopped during the export.</string>
+    <string name="failure_encoder_advice">Close other apps that use the camera or record video, then export again.</string>
+    <string name="failure_space">The phone ran out of storage space.</string>
+    <string name="failure_space_advice">Free some space, then export again. The save sheet shows the estimated file size.</string>
+    <string name="failure_save">The finished video could not be written to this phone\'s video library.</string>
+    <string name="failure_save_advice">Check that storage is available and that OpenBlur is allowed to save files, then export again.</string>
+    <string name="failure_time">Android stopped the export because it ran longer than the system allows in the background.</string>
+    <string name="failure_time_advice">Export again and keep OpenBlur open on the screen until it finishes.</string>
+    <string name="failure_unknown">The export stopped for a reason OpenBlur does not recognise.</string>
+    <string name="failure_unknown_advice">Export again. If it stops again, copy the details and report them on the source code page listed in About.</string>
+
+    <string name="about_title">About OpenBlur</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_privacy_heading">What happens to your video</string>
+    <string name="about_privacy_text">Your video is scanned, blurred and saved on this phone. OpenBlur cannot use the network, because it does not ask for the network permission. You can check this yourself: open the app info screen and look at the permissions.</string>
+    <string name="about_storage_text">Scans are kept on this phone until you delete them from the list on the first screen.</string>
+    <string name="about_app_info">Open app info</string>
+    <string name="about_app_info_failed">The app info screen could not be opened. Look for OpenBlur under Apps in the phone\'s settings.</string>
+    <string name="about_licence_heading">Licence</string>
+    <string name="about_licence_text">OpenBlur is free software under the GNU General Public License, version 3 or any later version (GPL-3.0-or-later). You may use, study, share and change it under the terms of that licence.</string>
+    <string name="about_source_heading">Source code</string>
+    <string name="about_source_url" translatable="false">https://github.com/vikas0706/openblur</string>
+    <string name="about_source_open">Open the source code page</string>
+    <string name="about_source_failed">No browser was found on this phone. The address is shown above.</string>
+    <string name="about_notices_heading">Open-source notices</string>
+    <string name="about_notices_text">These components are inside the app.</string>
+    <string name="about_component_androidx" translatable="false">AndroidX and Jetpack Compose</string>
+    <string name="about_component_media3" translatable="false">Media3</string>
+    <string name="about_component_kotlin" translatable="false">Kotlin and kotlinx.coroutines</string>
+    <string name="about_component_guava" translatable="false">Guava</string>
+    <string name="about_component_onnx" translatable="false">ONNX Runtime</string>
+    <string name="about_component_yunet">YuNet face detection model, by Shiqi Yu and contributors</string>
+    <string name="about_component_sface">SFace face recognition model, from OpenCV Zoo</string>
+    <string name="licence_apache" translatable="false">Apache-2.0</string>
+    <string name="licence_mit" translatable="false">MIT</string>
+    <string name="licence_bsd3" translatable="false">BSD-3-Clause</string>
+    <string name="about_show_apache">Show the Apache License 2.0 text</string>
+    <string name="about_hide_apache">Hide the Apache License 2.0 text</string>
+    <string name="about_show_bsd">Show the YuNet licence text</string>
+    <string name="about_hide_bsd">Hide the YuNet licence text</string>
+</resources>

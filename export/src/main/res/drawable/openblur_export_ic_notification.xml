@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The system tints status bar icons to one color, so the mosaic is drawn with two alpha levels. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M4,21.5 C4,17.6 7.6,15 12,15 C16.4,15 20,17.6 20,21.5 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M7.2,2.4 h2.8 v2.8 h-2.8 Z M14,2.4 h2.8 v2.8 h-2.8 Z M10.6,5.8 h2.8 v2.8 h-2.8 Z M7.2,9.2 h2.8 v2.8 h-2.8 Z M14,9.2 h2.8 v2.8 h-2.8 Z" />
+    <path
+        android:fillAlpha="0.55"
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M10.6,2.4 h2.8 v2.8 h-2.8 Z M7.2,5.8 h2.8 v2.8 h-2.8 Z M14,5.8 h2.8 v2.8 h-2.8 Z M10.6,9.2 h2.8 v2.8 h-2.8 Z" />
+</vector>

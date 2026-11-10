@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="designsystem_back">Back</string>
+    <string name="designsystem_notice_warning">Warning</string>
+    <string name="designsystem_notice_error">Error</string>
+    <string name="designsystem_state_blurred">Blurred</string>
+    <string name="designsystem_state_visible">Not blurred</string>
+    <string name="designsystem_state_mixed">Blurred in some shots</string>
+    <plurals name="designsystem_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+    <plurals name="designsystem_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="designsystem_seconds">
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
+    </plurals>
+</resources>
