@@ -1,0 +1,2 @@
+# ONNX Runtime's JNI code looks up these classes, constructors and fields by name.
+-keep class ai.onnxruntime.** { *; }

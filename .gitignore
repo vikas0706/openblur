@@ -1,0 +1,21 @@
+# Build output
+.gradle/
+build/
+*/build/
+.kotlin/
+
+# Machine-specific
+local.properties
+.idea/
+*.iml
+
+# Signing material never goes in the repository
+keystore.properties
+*.jks
+*.keystore
+
+# Working folders that are not part of the app
+_dl/
+_research/
+_tools/
+_out/
