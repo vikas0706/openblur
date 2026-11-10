@@ -1,0 +1,43 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: "platforms;android-37.0 build-tools;36.0.0 platform-tools"
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Unit tests
+        run: ./gradlew --console=plain test testDebugUnitTest
+
+      - name: Debug build (also checks the merged manifest has no network permission)
+        run: ./gradlew --console=plain :app:assembleDebug :app:compileDebugAndroidTestKotlin
+
+      - name: Unsigned release build
+        run: ./gradlew --console=plain :app:assembleRelease
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: reports
+          path: "**/build/reports/"
+          if-no-files-found: ignore
