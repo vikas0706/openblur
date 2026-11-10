@@ -1,7 +1,5 @@
 package io.github.vikas0706.openblur
 
-import android.graphics.Bitmap
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.util.Log
@@ -64,23 +62,23 @@ class EndToEndTest {
         val expectAudioCopied: Boolean?,
     )
 
-    @Test fun cutsAndRegrouping() = run(Case("t1_h264_1080p30_cuts_aac.mp4", 1920, 1080, 10, 14, true))
+    @Test fun cutsAndRegrouping(): Unit = run(Case("t1_h264_1080p30_cuts_aac.mp4", 1920, 1080, 10, 14, true))
 
-    @Test fun portraitRotated() = run(Case("t2_hevc_portrait_rot90_aac.mp4", 1080, 1920, 6, 9, true))
+    @Test fun portraitRotated(): Unit = run(Case("t2_hevc_portrait_rot90_aac.mp4", 1080, 1920, 6, 9, true))
 
-    @Test fun variableFrameRate() = run(Case("t3_h264_720p60_vfr_aac.mp4", 1280, 720, 3, 4, true))
+    @Test fun variableFrameRate(): Unit = run(Case("t3_h264_720p60_vfr_aac.mp4", 1280, 720, 3, 4, true))
 
-    @Test fun hdrHlg4k() = run(Case("t4_hevc_4k30_hlg10_aac.mp4", 3840, 2160, 6, 9, true))
+    @Test fun hdrHlg4k(): Unit = run(Case("t4_hevc_4k30_hlg10_aac.mp4", 3840, 2160, 6, 9, true))
 
-    @Test fun noFacesNoAudio() = run(Case("t5_h264_360p25_nofaces_noaudio.mp4", 640, 360, 0, 0, null))
+    @Test fun noFacesNoAudio(): Unit = run(Case("t5_h264_360p25_nofaces_noaudio.mp4", 640, 360, 0, 0, null))
 
-    @Test fun h264At4k60() = run(Case("t6_h264_4k60_aac.mp4", 3840, 2160, 3, 4, true))
+    @Test fun h264At4k60(): Unit = run(Case("t6_h264_4k60_aac.mp4", 3840, 2160, 3, 4, true))
 
-    @Test fun smallFaces() = run(Case("t7_h264_1080p30_smallfaces_aac.mp4", 1920, 1080, 4, 9, true))
+    @Test fun smallFaces(): Unit = run(Case("t7_h264_1080p30_smallfaces_aac.mp4", 1920, 1080, 4, 9, true))
 
-    @Test fun ac3AudioIsReencoded() = run(Case("t8_h264_720p30_ac3.mp4", 1280, 720, 3, 4, false))
+    @Test fun ac3AudioIsReencoded(): Unit = run(Case("t8_h264_720p30_ac3.mp4", 1280, 720, 3, 4, false))
 
-    private fun run(case: Case) = runBlocking {
+    private fun run(case: Case): Unit = runBlocking {
         val source = copyFromDevice(case.file)
         assumeTrue("Push ${case.file} to $DEVICE_DIR first", source != null)
         val uri = Uri.fromFile(source!!)
@@ -127,8 +125,10 @@ class EndToEndTest {
                 if (!info.isHdr && result.tracks.isNotEmpty()) {
                     log.append(comparePixels(source, report.outputUri, info, timeline))
                 }
-            } finally {
                 context.contentResolver.delete(report.outputUri, null, null)
+            } catch (t: Throwable) {
+                log.append("kept output for inspection: Movies/OpenBlur/${report.displayName}\n")
+                throw t
             }
         } catch (t: Throwable) {
             log.append("FAILED: $t\n")
@@ -183,47 +183,68 @@ class EndToEndTest {
     private fun comparePixels(source: File, output: Uri, info: SourceVideoInfo, timeline: MaskTimeline): String {
         val batch = MaskBatch()
         val sb = StringBuilder()
-        val src = MediaMetadataRetriever().apply { setDataSource(source.absolutePath) }
-        val out = MediaMetadataRetriever().apply { setDataSource(context, output) }
-        try {
-            var checked = 0
-            for (fraction in floatArrayOf(0.2f, 0.45f, 0.7f, 0.9f)) {
-                val t = (info.durationUs * fraction).toLong()
-                timeline.sample(t, batch)
-                if (batch.count == 0) continue
-                val scale = min(1f, 1920f / max(info.displayWidth, info.displayHeight))
-                val w = (info.displayWidth * scale).toInt()
-                val h = (info.displayHeight * scale).toInt()
-                val a = frame(src, t, w, h) ?: continue
-                val b = frame(out, t, w, h) ?: continue
-                val inside = sharpnessRatio(a, b, batch)
-                val psnr = psnrOutside(a, b, batch)
-                sb.append("frame at ${t / 1000} ms: ${batch.count} masks, detail kept inside ${"%.3f".format(inside)}, ")
-                sb.append("PSNR outside ${"%.1f".format(psnr)} dB\n")
-                assertTrue("faces still sharp at $t us (ratio $inside)", inside < 0.25f)
-                assertTrue("picture outside the masks changed at $t us (PSNR $psnr)", psnr > 36.0)
-                checked++
+        val src = ExactFrames(context, Uri.fromFile(source))
+        val out = ExactFrames(context, output)
+        var checked = 0
+        var worst = 99.0
+        val psnrs = ArrayList<Double>()
+        for (fraction in floatArrayOf(0.1f, 0.2f, 0.3f, 0.45f, 0.6f, 0.7f, 0.8f, 0.9f)) {
+            val t = (info.durationUs * fraction).toLong()
+            val a = src.lumaAt(t) ?: continue
+            val b = out.lumaAt(a.timeUs) ?: continue
+            assertTrue("same frame time ${a.timeUs} vs ${b.timeUs}", abs(a.timeUs - b.timeUs) <= 1)
+            timeline.sample(a.timeUs, batch)
+            if (batch.count == 0) continue
+            val (w, h) = if (info.rotationDegrees % 180 == 0) a.width to a.height else a.height to a.width
+            val ya = upright(a, info.rotationDegrees)
+            val yb = upright(b, info.rotationDegrees)
+            toFullRange(ya, a.fullRange)
+            toFullRange(yb, b.fullRange)
+            val inside = sharpnessRatio(ya, yb, w, h, batch)
+            val psnr = psnrOutside(ya, yb, w, h, batch)
+            worst = min(worst, psnr)
+            psnrs += psnr
+            sb.append("frame at ${a.timeUs / 1000} ms: ${batch.count} masks, detail kept inside ${"%.3f".format(inside)}, ")
+            sb.append("PSNR outside ${"%.1f".format(psnr)} dB\n")
+            if (psnr < 36.0) {
+                sb.append("  PSNR by 8x8 region, top row first: $lastErrorMap\n")
+                dumpFrame("e2e-${a.timeUs}", w, h, ya, yb, batch)
             }
-            assertTrue("no frame with masks could be compared", checked > 0)
-        } finally {
-            src.release()
-            out.release()
+            assertTrue("faces still sharp at ${a.timeUs} us (ratio $inside)", inside < 0.25f)
+            checked++
         }
+        assertTrue("no frame with masks could be compared", checked > 0)
+        val mean = psnrs.average()
+        sb.append("PSNR outside the masks: mean ${"%.1f".format(mean)} dB, worst ${"%.1f".format(worst)} dB\n")
+        // The hardware encoder's first frames are softer while its rate control settles, so the floor is lower than the mean.
+        assertTrue("picture outside the masks changed (mean $mean dB)\n$sb", mean >= 40.0)
+        assertTrue("picture outside the masks changed (worst $worst dB)\n$sb", worst >= 32.0)
         return sb.toString()
     }
 
-    private fun frame(mmr: MediaMetadataRetriever, timeUs: Long, w: Int, h: Int): Bitmap? {
-        val bmp = mmr.getScaledFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST, w, h) ?: return null
-        return if (bmp.width == w && bmp.height == h) bmp else Bitmap.createScaledBitmap(bmp, w, h, true)
+    /** Limited-range luma (16..235) stretched to 0..255 so files with different ranges compare fairly. */
+    private fun toFullRange(y: FloatArray, fullRange: Boolean) {
+        if (fullRange) return
+        for (i in y.indices) y[i] = ((y[i] - 16f) * 255f / 219f).coerceIn(0f, 255f)
     }
 
-    private fun luma(b: Bitmap): FloatArray {
-        val px = IntArray(b.width * b.height)
-        b.getPixels(px, 0, b.width, 0, 0, b.width, b.height)
-        return FloatArray(px.size) {
-            val c = px[it]
-            0.299f * ((c shr 16) and 0xFF) + 0.587f * ((c shr 8) and 0xFF) + 0.114f * (c and 0xFF)
+    /** Luma turned to display orientation, as floats. */
+    private fun upright(l: ExactFrames.Luma, rotation: Int): FloatArray {
+        val w = l.width
+        val h = l.height
+        if (rotation % 360 == 0) return FloatArray(w * h) { (l.y[it].toInt() and 0xFF).toFloat() }
+        val dw = if (rotation % 180 == 0) w else h
+        val dh = if (rotation % 180 == 0) h else w
+        val out = FloatArray(dw * dh)
+        for (row in 0 until dh) for (col in 0 until dw) {
+            val (sx, sy) = when ((rotation % 360 + 360) % 360) {
+                90 -> row to (h - 1 - col)
+                180 -> (w - 1 - col) to (h - 1 - row)
+                else -> (w - 1 - row) to col
+            }
+            out[row * dw + col] = (l.y[sy * w + sx].toInt() and 0xFF).toFloat()
         }
+        return out
     }
 
     /** Mask bounding half-extents in normalized frame units, x then y. */
@@ -238,11 +259,7 @@ class EndToEndTest {
         return ex / aspect to ey
     }
 
-    private fun sharpnessRatio(a: Bitmap, b: Bitmap, batch: MaskBatch): Float {
-        val w = a.width
-        val h = a.height
-        val ya = luma(a)
-        val yb = luma(b)
+    private fun sharpnessRatio(ya: FloatArray, yb: FloatArray, w: Int, h: Int, batch: MaskBatch): Float {
         var before = 0.0
         var after = 0.0
         for (i in 0 until batch.count) {
@@ -275,11 +292,28 @@ class EndToEndTest {
         return sumSq / n - mean * mean
     }
 
-    private fun psnrOutside(a: Bitmap, b: Bitmap, batch: MaskBatch): Double {
-        val w = a.width
-        val h = a.height
-        val ya = luma(a)
-        val yb = luma(b)
+    /** Writes both luma frames as PGM and the masks as text, for inspection with adb pull. */
+    private fun dumpFrame(name: String, w: Int, h: Int, ya: FloatArray, yb: FloatArray, batch: MaskBatch) {
+        val dir = context.getExternalFilesDir(null) ?: return
+        for ((suffix, y) in listOf("src" to ya, "out" to yb)) {
+            File(dir, "$name-$suffix.pgm").outputStream().buffered().use { o ->
+                o.write("P5\n$w $h\n255\n".toByteArray())
+                for (v in y) o.write(v.toInt().coerceIn(0, 255))
+            }
+        }
+        File(dir, "$name-masks.txt").writeText(
+            (0 until batch.count).joinToString("\n") { i ->
+                (0 until MaskBatch.GEOMETRY_STRIDE).joinToString(" ") { batch.geometry[i * MaskBatch.GEOMETRY_STRIDE + it].toString() } +
+                    " shape=${batch.shape[i]} kind=${batch.kind[i]} source=${batch.sourceId[i]}"
+            },
+        )
+    }
+
+    private val cellError = DoubleArray(64)
+    private val cellCount = IntArray(64)
+    private var lastErrorMap = ""
+
+    private fun psnrOutside(ya: FloatArray, yb: FloatArray, w: Int, h: Int, batch: MaskBatch): Double {
         var se = 0.0
         var n = 0
         for (row in 0 until h step 2) for (col in 0 until w step 2) {
@@ -299,7 +333,16 @@ class EndToEndTest {
             val d = (ya[row * w + col] - yb[row * w + col]).toDouble()
             se += d * d
             n++
+            val cell = (ny * 8).toInt().coerceIn(0, 7) * 8 + (nx * 8).toInt().coerceIn(0, 7)
+            cellError[cell] += d * d
+            cellCount[cell]++
         }
+        lastErrorMap = (0 until 64).joinToString(" ") { c ->
+            val e = if (cellCount[c] == 0) 0.0 else cellError[c] / cellCount[c]
+            (if (e < 1e-9) 99 else (10 * log10(255.0 * 255.0 / e)).toInt()).toString() + if (c % 8 == 7) " |" else ""
+        }
+        cellError.fill(0.0)
+        cellCount.fill(0)
         if (n == 0) return 99.0
         val mse = se / n
         return if (mse <= 1e-9) 99.0 else 10 * log10(255.0 * 255.0 / mse)

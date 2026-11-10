@@ -138,8 +138,14 @@ class DefaultEncoderPolicyTest {
     }
 
     @Test
-    fun anH264SourceIsNotLiftedToTheFloor() {
-        assertEquals(2_500_000, plans(source(bitrate = 2_000_000), phone)[0].bitrate)
+    fun aLeanH264SourceIsLiftedToTheFloor() {
+        // 0.4 of 0.25 bits per pixel at 1920x1080, 30 fps.
+        assertEquals(6_220_800, plans(source(bitrate = 2_000_000), phone)[0].bitrate)
+    }
+
+    @Test
+    fun aCameraRateSourceIsNotLifted() {
+        assertEquals(21_250_000, plans(source(bitrate = 17_000_000), phone)[0].bitrate)
     }
 
     @Test

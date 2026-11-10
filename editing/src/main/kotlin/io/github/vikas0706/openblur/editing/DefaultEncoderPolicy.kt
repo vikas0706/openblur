@@ -114,6 +114,8 @@ class DefaultEncoderPolicy : EncoderPolicy {
         var target = source.bitrate * headroom * (changedFrom?.let { codec.costAfter(it) } ?: 1.0)
         // A heavily compressed HEVC or AV1 source would otherwise give H.264 too few bits to work with.
         if (changedFrom != null && codec == Codec.AVC) target = max(target, Codec.AVC.bitsPerPixel * pixelsPerSecond)
+        // A second encode of an already lean file loses more than one of a camera original, so lean sources get a floor.
+        target = max(target, codec.bitsPerPixel * MIN_SHARE_OF_CAMERA_RATE * pixelsPerSecond * (headroom / MATCH_HEADROOM))
         return target.roundToLong()
     }
 
@@ -195,6 +197,9 @@ class DefaultEncoderPolicy : EncoderPolicy {
 
         /** Bitrate over the source's, so the second encode is not visible. */
         const val MATCH_HEADROOM = 1.25
+
+        /** Floor as a share of [Codec.bitsPerPixel]; chosen from on-device PSNR measurements of low-bitrate clips. */
+        const val MIN_SHARE_OF_CAMERA_RATE = 0.4
         const val MAXIMUM_HEADROOM = 2.0
 
         const val DEFAULT_KEYFRAME_SECONDS = 1.0f

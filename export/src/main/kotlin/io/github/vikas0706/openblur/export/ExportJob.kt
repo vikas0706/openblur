@@ -6,11 +6,14 @@ import android.media.metrics.LogSessionId
 import android.os.Handler
 import android.os.SystemClock
 import android.util.Log
+import androidx.media3.common.ColorInfo
 import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.Clock
 import androidx.media3.transformer.Codec
 import androidx.media3.transformer.Composition
+import androidx.media3.transformer.DefaultAssetLoaderFactory
 import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.EditedMediaItemSequence
@@ -77,6 +80,7 @@ internal class ExportJob(
     private val storage = StorageProbe(appContext)
     private val saver = MediaStoreSaver(appContext)
     private val progressHolder = ProgressHolder()
+    private val calibration = sharedCalibration(appContext)
 
     private var plans: List<EncodePlan> = emptyList()
     private var attempt: Attempt? = null
@@ -180,8 +184,10 @@ internal class ExportJob(
         }
         if (plan.iFrameIntervalSeconds > 0f) settings.setiFrameIntervalSeconds(plan.iFrameIntervalSeconds)
 
+        val decoders = ExactDecoderFactory(appContext, calibration)
         // Audio settings stay at their defaults: any change makes Transformer re-encode the audio.
         val encoders = RecordingEncoderFactory(
+            decoders,
             DefaultEncoderFactory.Builder(appContext)
                 .setRequestedVideoEncoderSettings(settings.build())
                 .setEnableFallback(target.mode != Mode.EXACT)
@@ -197,6 +203,9 @@ internal class ExportJob(
 
         return Transformer.Builder(appContext)
             .setLooper(handler.looper)
+            .setAssetLoaderFactory(
+                DefaultAssetLoaderFactory(appContext, decoders, Clock.DEFAULT, null),
+            )
             .setVideoMimeType(plan.mimeType)
             .setEncoderFactory(encoders)
             .setMuxerFactory(InAppMp4Muxer.Factory(if (request.removeLocation) LocationStripper() else null))
@@ -479,7 +488,10 @@ internal class ExportJob(
     }
 
     /** Passes encoder requests through and remembers the size that was asked for and which encoder took the video. */
-    private class RecordingEncoderFactory(private val delegate: Codec.EncoderFactory) : Codec.EncoderFactory {
+    private class RecordingEncoderFactory(
+        private val decoders: ExactDecoderFactory,
+        private val delegate: Codec.EncoderFactory,
+    ) : Codec.EncoderFactory {
         @Volatile
         var requestedWidth = 0
 
@@ -495,7 +507,15 @@ internal class ExportJob(
         override fun createForVideoEncoding(format: Format, logSessionId: LogSessionId?): Codec {
             requestedWidth = format.width
             requestedHeight = format.height
-            val codec = delegate.createForVideoEncoding(format, logSessionId)
+            val untagged = decoders.untaggedColorSpace
+            val info = format.colorInfo
+            // The decoder ran before this, so it already knows which matrix the GPU applied to an untagged stream.
+            val matched = if (untagged != null && info != null && !ColorInfo.isTransferHdr(info) && info.colorSpace != untagged) {
+                format.buildUpon().setColorInfo(info.buildUpon().setColorSpace(untagged).build()).build()
+            } else {
+                format
+            }
+            val codec = delegate.createForVideoEncoding(matched, logSessionId)
             encoderName = codec.name
             return codec
         }
@@ -514,3 +534,10 @@ internal class ExportJob(
         const val COPY_SHARE_OF_SAVING = 0.95f
     }
 }
+
+private var calibrationInstance: DecoderCalibration? = null
+
+/** One calibration per process, so the stored verdicts are read once. */
+@Synchronized
+internal fun sharedCalibration(context: Context): DecoderCalibration =
+    calibrationInstance ?: DecoderCalibration(context).also { calibrationInstance = it }
