@@ -18,6 +18,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.Presentation
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.video.VideoFrameMetadataListener
 import io.github.vikas0706.openblur.api.MaskEffectController
 import io.github.vikas0706.openblur.core.MaskTimeline
@@ -54,6 +55,9 @@ internal class PreviewPlayer(
     // Effect timestamps equal source timestamps only if no seek reaches the player before its first STATE_READY.
     private var readyOnce = false
     private var pendingSeekUs = C.TIME_UNSET
+    // Whether the queued seek was asked for by the user, and whether it must redraw even at the current position.
+    private var pendingUserSeek = false
+    private var pendingRedraw = false
     private var seekInFlight = false
     private val seekWatchdog = Runnable {
         seekInFlight = false
@@ -97,7 +101,11 @@ internal class PreviewPlayer(
             .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
             .build()
         player.setAudioAttributes(audio, /* handleAudioFocus = */ true)
+        // Pauses when headphones are pulled out, so a private video's sound does not jump to the loudspeaker.
+        player.setHandleAudioBecomingNoisy(true)
         player.setVideoEffects(effects)
+        // A redraw seek must land on the frame already shown, not on a nearby key frame.
+        player.setSeekParameters(SeekParameters.EXACT)
         player.addListener(listener)
         // Called on the playback thread; with effects installed the time is the frame's source time.
         player.setVideoFrameMetadataListener(
@@ -116,19 +124,40 @@ internal class PreviewPlayer(
 
     val positionUs: Long get() = player.currentPosition.coerceAtLeast(0L) * 1_000L
 
-    override fun seekTo(positionUs: Long) {
+    override fun seekTo(positionUs: Long) = requestSeek(positionUs, user = true, redraw = false)
+
+    /**
+     * A paused player does not redraw when the masks change; seeking to the frame it shows does.
+     * Call after [setTimeline], so the frame the seek decodes is drawn with the new masks.
+     * Requests made while a seek is running collapse into one, so a drag queues at most one more seek.
+     */
+    fun redrawIfPaused(positionUs: Long) {
+        if (!released && !player.playWhenReady && status == PreviewStatus.READY) {
+            requestSeek(positionUs, user = false, redraw = true)
+        }
+    }
+
+    private fun requestSeek(positionUs: Long, user: Boolean, redraw: Boolean) {
         if (released) return
         if (!readyOnce || seekInFlight) {
             pendingSeekUs = positionUs
+            pendingUserSeek = pendingUserSeek || user
+            pendingRedraw = pendingRedraw || redraw
             return
         }
-        startSeek(positionUs)
+        startSeek(positionUs, redraw)
     }
 
-    private fun startSeek(positionUs: Long) {
-        seekInFlight = true
+    private fun startSeek(positionUs: Long, redraw: Boolean) {
         // Rounded down so the frame at exactly this time is the one an exact seek shows.
-        player.seekTo(positionUs / 1_000L)
+        val targetMs = positionUs / 1_000L
+        val state = player.playbackState
+        // ExoPlayer drops a seek to the millisecond it is already at while ready or buffering, and draws nothing.
+        val dropped = player.currentPosition == targetMs && (state == Player.STATE_READY || state == Player.STATE_BUFFERING)
+        if (dropped && !redraw) return
+        seekInFlight = true
+        if (dropped) player.seekTo(targetMs + 1L)
+        player.seekTo(targetMs)
         handler.removeCallbacks(seekWatchdog)
         handler.postDelayed(seekWatchdog, SEEK_WATCHDOG_MS)
     }
@@ -136,13 +165,18 @@ internal class PreviewPlayer(
     private fun flushPendingSeek() {
         val target = pendingSeekUs
         if (target == C.TIME_UNSET || !readyOnce || released) return
-        pendingSeekUs = C.TIME_UNSET
-        startSeek(target)
+        val user = pendingUserSeek
+        val redraw = pendingRedraw
+        clearPendingSeek()
+        // Playback that started meanwhile draws the new masks itself; a redraw seek would only jump back.
+        if (!user && player.playWhenReady) return
+        startSeek(target, redraw)
     }
 
-    /** A paused player does not redraw when the masks change; seeking to where it already is does. */
-    fun redrawIfPaused(positionUs: Long) {
-        if (!released && !player.isPlaying && status == PreviewStatus.READY) seekTo(positionUs)
+    private fun clearPendingSeek() {
+        pendingSeekUs = C.TIME_UNSET
+        pendingUserSeek = false
+        pendingRedraw = false
     }
 
     override fun play() {
@@ -166,7 +200,11 @@ internal class PreviewPlayer(
         readyOnce = false
         seekInFlight = false
         handler.removeCallbacks(seekWatchdog)
-        pendingSeekUs = if (positionUs > 0L) positionUs else C.TIME_UNSET
+        clearPendingSeek()
+        if (positionUs > 0L) {
+            pendingSeekUs = positionUs
+            pendingUserSeek = true
+        }
         player.playWhenReady = false
         player.setMediaItem(item)
         player.prepare()

@@ -7,9 +7,15 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,6 +51,8 @@ internal fun AboutScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
     var browserFailed by remember { mutableStateOf(false) }
     var showApache by rememberSaveable { mutableStateOf(false) }
     var showBsd by rememberSaveable { mutableStateOf(false) }
+    var showMit by rememberSaveable { mutableStateOf(false) }
+    var showOnnxNotices by rememberSaveable { mutableStateOf(false) }
     BackHandler(onBack = onBack)
 
     ScreenFrame(title = stringResource(R.string.about_title), onBack = onBack, modifier = modifier) {
@@ -115,8 +123,56 @@ internal fun AboutScreen(onBack: () -> Unit, modifier: Modifier = Modifier) {
             onClick = { showBsd = !showBsd },
         )
         if (showBsd) LicenceText(R.raw.licence_bsd3_yunet)
+        SecondaryButton(
+            text = stringResource(if (showMit) R.string.about_hide_onnx else R.string.about_show_onnx),
+            onClick = { showMit = !showMit },
+        )
+        if (showMit) LicenceText(R.raw.licence_mit_onnxruntime)
+        SecondaryButton(
+            text = stringResource(if (showOnnxNotices) R.string.about_hide_onnx_notices else R.string.about_show_onnx_notices),
+            onClick = { showOnnxNotices = !showOnnxNotices },
+        )
+        if (showOnnxNotices) LongLicenceText(R.raw.notices_onnxruntime)
     }
 }
+
+/** For texts too long for one Text: about 320 kB laid out at once stalls the main thread. */
+@Composable
+private fun LongLicenceText(rawId: Int) {
+    val context = LocalContext.current
+    val paragraphs by produceState(initialValue = emptyList<String>(), rawId) {
+        value = withContext(Dispatchers.IO) {
+            try {
+                context.resources.openRawResource(rawId).bufferedReader().use { it.readText() }
+                    .split(Regex("\n\\s*\n"))
+                    .filter { it.isNotBlank() }
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+    }
+    if (paragraphs.isNotEmpty()) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(480.dp)
+                .background(OpenBlurTheme.colors.surfaceHigh, OpenBlurShapes.Control)
+                .testTag(TAG_ONNX_NOTICES),
+            contentPadding = PaddingValues(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(paragraphs) { paragraph ->
+                Text(
+                    text = paragraph,
+                    color = OpenBlurTheme.colors.text,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
+}
+
+internal const val TAG_ONNX_NOTICES = "onnx-notices"
 
 @Composable
 private fun LicenceText(rawId: Int) {

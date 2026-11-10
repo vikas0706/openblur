@@ -327,8 +327,43 @@ class ProjectFilesTest {
         pictures.put(2, 2, thumbnail())
         assertFalse("a scan still running must not recreate the folder", File(root, id).exists())
 
-        files.delete(id)
-        files.delete("never-existed")
+        assertNull(files.delete(id))
+        assertNull(files.delete("never-existed"))
+    }
+
+    @Test
+    fun deleteReportsTheSourceOnlyOnceNoSavedProjectUsesIt() = runBlocking {
+        val files = open()
+        val first = files.newId()
+        val second = files.newId()
+        val other = files.newId()
+        files.saveSample(first)
+        files.saveSample(second)
+        files.save(other, OTHER_SOURCE, "other.mp4", Fixtures.info(), AnalysisOptions.STANDARD, Fixtures.result(), EditState())
+
+        assertNull("another project still reads this video", files.delete(first))
+        assertEquals(SOURCE, files.delete(second))
+        assertNull("already deleted", files.delete(second))
+        assertNull("never saved", files.delete(files.newId()))
+        assertEquals(OTHER_SOURCE, files.delete(other))
+    }
+
+    @Test
+    fun discardUnsavedRemovesAScanOfThisProcessAtOnce() = runBlocking {
+        val files = open()
+        val cancelled = files.newId()
+        val pictures = files.thumbnails(cancelled)
+        pictures.put(2, 2, thumbnail())
+        files.discardUnsaved(cancelled)
+        assertFalse(File(root, cancelled).exists())
+        pictures.put(2, 2, thumbnail())
+        assertFalse("a late picture must not recreate the folder", File(root, cancelled).exists())
+
+        val saved = files.newId()
+        files.saveSample(saved)
+        files.discardUnsaved(saved)
+        assertNotNull(files.load(saved) { true })
+        files.discardUnsaved("never-existed")
     }
 
     @Test
@@ -432,5 +467,6 @@ class ProjectFilesTest {
 
     private companion object {
         const val SOURCE = "content://media/external/video/media/42"
+        const val OTHER_SOURCE = "content://media/external/video/media/43"
     }
 }

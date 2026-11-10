@@ -37,6 +37,7 @@ internal fun ScanningScreen(
     onDismissBusyNotice: () -> Unit,
     onCancel: () -> Unit,
     onRetry: () -> Unit,
+    onChooseAnother: () -> Unit = onCancel,
     modifier: Modifier = Modifier,
 ) {
     val failed = scan.stage as? ScanStage.Failed
@@ -58,7 +59,7 @@ internal fun ScanningScreen(
     ) {
         if (busyNotice) BusyNotice(onDismissBusyNotice)
         if (failed != null) {
-            ScanFailed(failed.failure, scan.isRescan, onRetry, onCancel)
+            ScanFailed(failed.failure, scan.isRescan, onRetry, if (scan.isRescan) onCancel else onChooseAnother)
         } else {
             KeepScreenOn()
             ScanProgress(scan.stage)

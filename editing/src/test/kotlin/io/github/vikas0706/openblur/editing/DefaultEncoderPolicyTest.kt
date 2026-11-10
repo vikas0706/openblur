@@ -309,6 +309,47 @@ class DefaultEncoderPolicyTest {
     }
 
     @Test
+    fun theLeanSourceFloorIsCappedByTheEncoderAndSaysSo() {
+        // 2 Mbps H.264 at 1080p30 lifts to 6_220_800 by the floor alone, above this encoder's 5 Mbps.
+        val lean = source(bitrate = 2_000_000)
+        val encoders = listOf(encoder(avc, maxBitrate = 5_000_000), encoder(hevc, maxBitrate = 3_000_000))
+
+        assertEquals(
+            listOf(
+                plan(avc, 5_000_000, BITRATE_CAPPED_BY_ENCODER),
+                plan(avc, 5_000_000, BITRATE_CAPPED_BY_ENCODER, SIZE_MAY_BE_ADJUSTED, strict = false),
+            ),
+            plans(lean, encoders),
+        )
+    }
+
+    @Test
+    fun noPlanEverExceedsItsEncodersMaximumOrHidesTheCap() {
+        val sources = listOf(
+            source(bitrate = 500_000), source(bitrate = 0), source(hevc, bitrate = 300_000), source(hevc, 3840, 2160, frameRate = 60f, bitrate = 1_000_000),
+            source(av1, bitrate = 200_000), source(vp9, bitrate = 0), source("video/mp4v-es", bitrate = 100_000),
+            source(hevc, 3840, 2160, bitrate = 2_000_000, transfer = TransferKind.HLG, bitDepth = 10),
+            source(bitrate = Int.MAX_VALUE), source(frameRate = 240f, bitrate = 4_000_000),
+        )
+        for (ceiling in intArrayOf(1, 1_000_000, 4_000_000, 20_000_000, 100_000_000)) {
+            val encoders = listOf(
+                encoder(avc, maxBitrate = ceiling), encoder(hevc, maxBitrate = ceiling, hdr = true),
+                encoder(av1, maxBitrate = ceiling), encoder(vp9, maxBitrate = ceiling),
+            )
+            for (source in sources) {
+                for (quality in ExportQuality.entries) {
+                    for (plan in plans(source, encoders, quality)) {
+                        assertTrue("$plan for $source", plan.bitrate <= ceiling)
+                        val uncapped = plans(source, encoders.map { it.copy(maxBitrate = 0) }, quality)
+                            .first { it.mimeType == plan.mimeType && it.strictSize == plan.strictSize }
+                        assertEquals("$plan for $source", uncapped.bitrate > ceiling, BITRATE_CAPPED_BY_ENCODER in plan.notices)
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun aTargetAtOrBelowTheMaximumIsLeftAlone() {
         val exact = plans(source(), listOf(encoder(avc, maxBitrate = 21_250_000)))
         val unknownLimit = plans(source(), listOf(encoder(avc, maxBitrate = 0)))

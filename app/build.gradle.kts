@@ -46,7 +46,17 @@ android {
             signingConfig = signingConfigs.findByName("release")
             ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
         }
+        // Release code after R8, signed with the debug key, so the device tests can run against shrunk code.
+        create("minified") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".minified"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+        }
     }
+
+    // ./gradlew -Popenblur.testBuildType=minified :app:connectedMinifiedAndroidTest runs the device tests on R8 output.
+    testBuildType = providers.gradleProperty("openblur.testBuildType").getOrElse("debug")
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

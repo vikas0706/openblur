@@ -254,6 +254,8 @@ internal class Scan(
     private fun isCurrent(session: ScanSession): Boolean = !ended.get() && this.session === session
 
     private fun completed(session: ScanSession) {
+        // Nobody collects the result after a stop, and a finished analyzer keeps its thumbnails on close.
+        if (stopRequested.get()) return end()
         if (session.framesSeen == 0) {
             fail(AnalysisException(Kind.DECODER_FAILED, "The video was read to its end without decoding a frame"))
             return

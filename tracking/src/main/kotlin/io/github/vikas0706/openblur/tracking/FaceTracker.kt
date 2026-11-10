@@ -2,6 +2,7 @@ package io.github.vikas0706.openblur.tracking
 
 import io.github.vikas0706.openblur.core.FaceEmbedder
 import io.github.vikas0706.openblur.core.ThumbnailStore
+import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
@@ -253,6 +254,7 @@ internal class FaceTracker(
         if (similarity >= Tuning.REJECT_COSINE) {
             track.strikes = 0
             track.confirmedPtsUs = ptsUs
+            track.confirmedRun = run
             release(track.heldThumb)
             track.heldThumb = -1
             return false
@@ -274,8 +276,10 @@ internal class FaceTracker(
         for (i in 0 until liveCount) {
             val track = live[i]!!
             if (track.retired) {
-                forgetUnconfirmed(track)
-                close(track, trim = true)
+                val unconfirmedThumb = forgetUnconfirmed(track)
+                splitUnconfirmed(track, unconfirmedThumb)
+                // The confirmed part was a kept face before the split, so a short remainder is not dropped.
+                close(track, trim = true, force = true)
             } else {
                 live[kept++] = track
             }
@@ -284,10 +288,14 @@ internal class FaceTracker(
         liveCount = kept
     }
 
-    /** Pictures taken since the last passed check may show the other person, so they do not speak for this track. */
-    private fun forgetUnconfirmed(track: LiveTrack) {
+    /**
+     * Pictures taken since the last passed check may show the other person, so they do not speak for this track.
+     * Returns the unconfirmed thumbnail that was taken off the track, or -1.
+     */
+    private fun forgetUnconfirmed(track: LiveTrack): Int {
+        var unconfirmedThumb = -1
         if (track.heldThumb >= 0) {
-            release(track.thumbHandle)
+            unconfirmedThumb = track.thumbHandle
             track.thumbHandle = track.heldThumb
             track.thumbQuality = track.heldThumbQuality
             track.heldThumb = -1
@@ -306,6 +314,38 @@ internal class FaceTracker(
             }
         }
         track.sampleCount = kept
+        return unconfirmedThumb
+    }
+
+    /**
+     * Moves the boxes after the last passed check into a track of their own, without an embedding, so the
+     * stranger they may show is not unblurred along with this person. Takes ownership of [thumb].
+     */
+    private fun splitUnconfirmed(track: LiveTrack, thumb: Int) {
+        val n = track.size
+        val runs = track.runs
+        var keep = 0
+        while (keep < n && runs[keep] <= track.confirmedRun) keep++
+        if (keep == 0 || keep == n) {
+            release(thumb)
+            return
+        }
+        closed.add(
+            ClosedTrack(
+                serial = nextSerial++,
+                shot = track.shot,
+                size = n - keep,
+                runs = runs.copyOfRange(keep, n),
+                boxes = track.boxes.copyOfRange(keep * 4, n * 4),
+                eyes = track.eyes.copyOfRange(keep * 4, n * 4),
+                meanScore = (track.scoreSum / n).toFloat(),
+                thumbHandle = thumb,
+                thumbQuality = 0f,
+                centroid = null,
+                centroidWeight = 0f,
+            ),
+        )
+        track.truncate(keep)
     }
 
     private fun similarityTo(track: LiveTrack, d: Int, crops: CropSource): Float {
@@ -398,6 +438,8 @@ internal class FaceTracker(
         track.append(run, ptsUs, box, d * 4, if (batch.hasLandmarks[d]) batch.landmarks else null, d * 10, batch.score[d])
         track.matched = true
         track.confirmedPtsUs = ptsUs
+        track.confirmedRun = run
+        corroborate(track, box, d * 4)
         if (liveCount == live.size) live = live.copyOf(liveCount * 2)
         live[liveCount++] = track
         picture(track, batch, d, ptsUs, crops)
@@ -506,12 +548,31 @@ internal class FaceTracker(
         }
     }
 
-    private fun keeps(track: LiveTrack): Boolean = track.size >= 2 || track.maxScore >= Tuning.SINGLE_RUN_SCORE
+    /**
+     * A face that moves more than about its width per run never matches its last box, so each run starts a
+     * one-sample track; below the single-run score all of them would be dropped. Neighbors one run apart keep each other.
+     */
+    private fun corroborate(track: LiveTrack, box: FloatArray, at: Int) {
+        for (i in 0 until liveCount) {
+            val other = live[i]!!
+            if (other.size != 1 || other.matched || other.lastRun != previousRun) continue
+            val ob = other.boxes
+            val reach = CORROBORATION_REACH * max(max(ob[2], box[at + 2]), max(ob[3], box[at + 3]))
+            val ratio = (ob[2] * ob[3]) / (box[at + 2] * box[at + 3])
+            if (abs(ob[0] - box[at]) <= reach && abs(ob[1] - box[at + 1]) <= reach && ratio in 0.25f..4f) {
+                other.corroborated = true
+                track.corroborated = true
+            }
+        }
+    }
 
-    private fun close(track: LiveTrack, trim: Boolean) {
+    private fun keeps(track: LiveTrack): Boolean =
+        track.size >= 2 || track.maxScore >= Tuning.SINGLE_RUN_SCORE || track.corroborated
+
+    private fun close(track: LiveTrack, trim: Boolean, force: Boolean = false) {
         release(track.heldThumb)
         track.heldThumb = -1
-        if (!keeps(track)) {
+        if (!force && !keeps(track)) {
             release(track.thumbHandle)
             track.thumbHandle = -1
             recycleCrops(track)
@@ -645,5 +706,8 @@ internal class FaceTracker(
         /** The reference embedding is taken again once a kept crop is this much better than the one it came from. */
         const val REFERENCE_REFRESH_GAIN = 1.5f
         const val MAX_THUMBNAIL_FAILURES = 3
+
+        /** How far, in box sizes, a one-sample track and a new one a run later may lie apart and still corroborate. */
+        const val CORROBORATION_REACH = 4f
     }
 }

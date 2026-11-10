@@ -136,7 +136,7 @@ class ShellViewModelTest {
         vm.cancelScan()
         assertEquals(Screen.Home, vm.screen.value)
         assertEquals(1, fake.fakeAnalyzer.cancelled)
-        assertEquals(2, fake.fakeProjects.deleteAbandonedCalls)
+        assertEquals(listOf("scan-1"), fake.fakeProjects.discarded)
         assertTrue(fake.fakeProjects.ids().isEmpty())
     }
 
@@ -174,7 +174,7 @@ class ShellViewModelTest {
             val vm = viewModel()
             vm.onVideoChosen(Samples.sourceUri)
             assertEquals(error.toString(), ScanStage.Failed(expected), vm.scanStage())
-            assertEquals(2, fake.fakeProjects.deleteAbandonedCalls)
+            assertEquals(listOf("scan-1"), fake.fakeProjects.discarded)
             assertTrue(fake.fakeProjects.ids().isEmpty())
         }
     }
@@ -205,6 +205,37 @@ class ShellViewModelTest {
         vm.onVideoChosen(Samples.sourceUri)
         vm.cancelScan()
         assertEquals(Screen.Home, vm.screen.value)
+    }
+
+    @Test
+    fun chooseAnotherVideo_afterAFailedScan_goesHomeAndAsksForThePicker() = runTest {
+        fake.fakeInspector.failure = UnreadableVideoException("x")
+        val vm = viewModel()
+        var picks = 0
+        val collector = backgroundScope.launch(dispatcher) { vm.pickRequests.collect { picks++ } }
+        vm.onVideoChosen(Samples.sourceUri)
+        vm.chooseAnotherVideo()
+        assertEquals(Screen.Home, vm.screen.value)
+        assertEquals(1, picks)
+        collector.cancel()
+    }
+
+    @Test
+    fun interruptedExport_showsOnHomeUntilDismissed() = runTest {
+        fake.fakeExporter.interruptedFlag.value = true
+        val vm = viewModel()
+        assertTrue(vm.home.value.exportInterrupted)
+        vm.dismissInterruptedExport()
+        assertFalse(vm.home.value.exportInterrupted)
+        assertFalse(fake.fakeExporter.interrupted.value)
+    }
+
+    @Test
+    fun interruptedExport_foundAfterStart_stillReachesHome() = runTest {
+        val vm = viewModel()
+        assertFalse(vm.home.value.exportInterrupted)
+        fake.fakeExporter.interruptedFlag.value = true
+        assertTrue(vm.home.value.exportInterrupted)
     }
 
     @Test
@@ -323,6 +354,40 @@ class ShellViewModelTest {
         vm.cancelScan()
         assertEquals("old", vm.editor().project.id)
         assertEquals(setOf("old"), fake.fakeProjects.ids())
+    }
+
+    @Test
+    fun cancelledRescan_returnsWithTheEditSavedSinceOpening() = runTest {
+        fake.fakeProjects.put(Samples.project("old"))
+        fake.fakeAnalyzer.hold = CompletableDeferred()
+        val vm = viewModel()
+        vm.openProject("old")
+        val newer = EditState(visibleTrackIds = setOf(2))
+        fake.fakeProjects.saveEdit("old", newer)
+        vm.rescanThorough()
+        vm.cancelScan()
+        assertEquals(newer, vm.editor().project.edit)
+    }
+
+    @Test
+    fun failedRescan_returnsWithTheSavedEdit_orTheOpenedOneWhenItCannotBeRead() = runTest {
+        val opened = EditState(visibleTrackIds = setOf(1))
+        fake.fakeProjects.put(Samples.project("old", edit = opened))
+        fake.fakeAnalyzer.failure = AnalysisException(AnalysisException.Kind.DECODER_FAILED, "x")
+        val vm = viewModel()
+        vm.openProject("old")
+        val newer = EditState(visibleTrackIds = setOf(2))
+        fake.fakeProjects.saveEdit("old", newer)
+        vm.rescanThorough()
+        assertEquals(ScanStage.Failed(ScanFailure.DECODER), vm.scanStage())
+        vm.cancelScan()
+        assertEquals(newer, vm.editor().project.edit)
+
+        fake.fakeProjects.unavailable += "old"
+        vm.rescanThorough()
+        vm.cancelScan()
+        assertEquals("old", vm.editor().project.id)
+        assertEquals(newer, vm.editor().project.edit)
     }
 
     @Test

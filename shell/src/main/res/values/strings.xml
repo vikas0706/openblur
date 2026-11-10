@@ -46,6 +46,7 @@
     <string name="home_projects_empty">No scanned videos yet. After you choose a video and the scan finishes, it appears here, and you can open it again without another scan.</string>
     <string name="home_projects_error">Your scanned videos could not be loaded.</string>
     <string name="home_notice_project_missing">That scan could not be opened. The video may have been moved or deleted. Choose the video again to scan it.</string>
+    <string name="home_notice_export_interrupted">OpenBlur closed before your last save finished, so that video was not saved. You can save it again from its scan.</string>
     <string name="home_notice_delete_failed">The scan could not be deleted.</string>
     <string name="home_notice_no_picker">This phone has no app for choosing a video. Open the video in a file manager or gallery app and share it to OpenBlur.</string>
     <string name="home_notice_busy">OpenBlur is still working on another video, so the new one was not opened. Finish or cancel the current video first.</string>
@@ -239,4 +240,8 @@
     <string name="about_hide_apache">Hide the Apache License 2.0 text</string>
     <string name="about_show_bsd">Show the YuNet licence text</string>
     <string name="about_hide_bsd">Hide the YuNet licence text</string>
+    <string name="about_show_onnx">Show the ONNX Runtime licence text</string>
+    <string name="about_hide_onnx">Hide the ONNX Runtime licence text</string>
+    <string name="about_show_onnx_notices">Show notices for code inside ONNX Runtime</string>
+    <string name="about_hide_onnx_notices">Hide notices for code inside ONNX Runtime</string>
 </resources>

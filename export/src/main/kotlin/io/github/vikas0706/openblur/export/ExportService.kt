@@ -128,7 +128,8 @@ class ExportService : Service() {
     }
 
     private fun showProgress(job: ExportJob, phase: ExportPhase, overall: Float) {
-        if (job !== activeJob) return
+        // After onTimeout the service is no longer in the foreground, so a posted progress notification would outlive it.
+        if (job !== activeJob || job.ticket.stopReason != null) return
         val now = SystemClock.elapsedRealtime()
         if (now - lastWakeRenewalMs >= WAKE_LOCK_RENEWAL_MS) holdWakeLock()
         val percent = ExportProgress.percent(overall)
@@ -146,6 +147,8 @@ class ExportService : Service() {
         ExportSession.finish(job.ticket, terminal)
         releaseWakeLock()
         stopForeground(STOP_FOREGROUND_REMOVE)
+        // stopForeground removes nothing once onTimeout has already left the foreground.
+        notifications.cancelProgress()
         if (!AppVisibility.isVisible()) {
             when (terminal) {
                 is ExportState.Succeeded -> notifications.showSaved(terminal.report.displayName)

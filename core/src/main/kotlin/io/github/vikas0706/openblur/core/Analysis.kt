@@ -23,8 +23,9 @@ data class AnalysisOptions(
 interface FrameCropper {
     /**
      * Fills [outRgb] (outWidth * outHeight * 3 bytes, row 0 at the top) with a bilinear resample of the frame.
-     * [corners] is six normalized frame coordinates (x right, y down): where the output's top-left,
-     * top-right and bottom-left pixels sample from. Samples outside the frame clamp to its edge.
+     * [corners] is six normalized frame coordinates (x right, y down): the outer top-left, top-right and
+     * bottom-left corners of the output square. Output pixel (i, j) samples at tl + ((i + 0.5) / outWidth) * (tr - tl)
+     * + ((j + 0.5) / outHeight) * (bl - tl). Samples outside the frame clamp to its edge.
      */
     fun crop(corners: FloatArray, outWidth: Int, outHeight: Int, outRgb: ByteArray)
 }

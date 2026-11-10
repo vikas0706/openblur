@@ -2,6 +2,7 @@ package io.github.vikas0706.openblur.analysis
 
 import android.content.ContentResolver
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.core.graphics.createBitmap
@@ -17,6 +18,7 @@ import java.io.File
 import java.io.IOException
 import java.io.OutputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Keeps each project in filesDir/projects/<id>/. [save] and [saveEdit] throw [IOException] when the data
@@ -76,9 +78,26 @@ class FileProjectStore internal constructor(
 
     override suspend fun list(): List<ProjectSummary> = files.list()
 
-    override suspend fun delete(projectId: String) = files.delete(projectId)
+    override suspend fun delete(projectId: String) {
+        val orphaned = files.delete(projectId) ?: return
+        releaseReadGrant(orphaned.toUri())
+    }
 
     override suspend fun deleteAbandoned() = files.deleteAbandoned()
+
+    override suspend fun discardUnsaved(projectId: String) = files.discardUnsaved(projectId)
+
+    // Persisted grants are capped per app, so one no saved project needs is handed back.
+    private suspend fun releaseReadGrant(uri: Uri) {
+        if (uri.scheme != ContentResolver.SCHEME_CONTENT) return
+        withContext(Dispatchers.IO) {
+            try {
+                appContext.contentResolver.releasePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (e: SecurityException) {
+                // No persisted grant was held, as with providers that do not offer one.
+            }
+        }
+    }
 
     // A picker grant can lapse and a file can be deleted; either way the project cannot be previewed or exported.
     private fun canOpen(uri: Uri): Boolean = try {

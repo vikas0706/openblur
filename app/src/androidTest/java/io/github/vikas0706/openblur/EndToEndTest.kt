@@ -35,7 +35,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
+import org.junit.Assert.assertNotNull
 import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,6 +60,8 @@ class EndToEndTest {
         val maxPeople: Int,
         /** Null when the source has no audio. */
         val expectAudioCopied: Boolean?,
+        val checkMetadata: Boolean = false,
+        val removeLocation: Boolean = false,
     )
 
     @Test fun cutsAndRegrouping(): Unit = run(Case("t1_h264_1080p30_cuts_aac.mp4", 1920, 1080, 10, 14, true))
@@ -69,6 +71,12 @@ class EndToEndTest {
     @Test fun variableFrameRate(): Unit = run(Case("t3_h264_720p60_vfr_aac.mp4", 1280, 720, 3, 4, true))
 
     @Test fun hdrHlg4k(): Unit = run(Case("t4_hevc_4k30_hlg10_aac.mp4", 3840, 2160, 6, 9, true))
+
+    @Test fun keepsLocationAndCreationTime(): Unit =
+        run(Case("t9_location.mp4", 1080, 1920, 6, 9, true, checkMetadata = true))
+
+    @Test fun removesLocationWhenAsked(): Unit =
+        run(Case("t9_location.mp4", 1080, 1920, 6, 9, true, removeLocation = true))
 
     @Test fun noFacesNoAudio(): Unit = run(Case("t5_h264_360p25_nofaces_noaudio.mp4", 640, 360, 0, 0, null))
 
@@ -80,7 +88,7 @@ class EndToEndTest {
 
     private fun run(case: Case): Unit = runBlocking {
         val source = copyFromDevice(case.file)
-        assumeTrue("Push ${case.file} to $DEVICE_DIR first", source != null)
+        assertNotNull("Push ${case.file} to $DEVICE_DIR first", source)
         val uri = Uri.fromFile(source!!)
         val log = StringBuilder("== ${case.file}\n")
 
@@ -115,13 +123,16 @@ class EndToEndTest {
             checkTracks(result)
 
             val timeline = services.timelines.build(result, EditState())
-            val report = export(uri, info, timeline, case.file)
+            val report = export(uri, info, timeline, case.file, case.removeLocation)
             log.append("plan: ${report.plan}\n")
             log.append("output: ${describe(report.output)}\n")
             log.append("notices: ${report.notices}, audio copied ${report.audioCopied}, ${report.elapsedMs} ms\n")
 
             try {
                 checkOutput(case, info, report)
+                if (case.checkMetadata) checkMetadata(source, report)
+                if (case.removeLocation) assertTrue("location removed", !report.output.hasLocation)
+                log.append(checkNoFaceLeft(report))
                 if (!info.isHdr && result.tracks.isNotEmpty()) {
                     log.append(comparePixels(source, report.outputUri, info, timeline))
                 }
@@ -177,6 +188,23 @@ class EndToEndTest {
             assertEquals("no audio track invented", null, out.audioMimeType)
         }
         assertTrue("plan bitrate ${report.plan.bitrate} below source ${source.bitrate}", report.plan.bitrate >= source.bitrate)
+    }
+
+    private fun checkMetadata(source: File, report: ExportReport) {
+        assertTrue("source has a location", report.source.hasLocation)
+        assertTrue("location kept", report.output.hasLocation)
+        fun date(set: (android.media.MediaMetadataRetriever) -> Unit): String? {
+            val r = android.media.MediaMetadataRetriever()
+            return try {
+                set(r)
+                r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DATE)
+            } finally {
+                r.release()
+            }
+        }
+        val before = date { it.setDataSource(source.absolutePath) }
+        val after = date { it.setDataSource(context, report.outputUri) }
+        assertEquals("creation time kept", before, after)
     }
 
     /** Compares the same frames in source and output: faces must lose their detail, everything else must stay. */
@@ -260,8 +288,7 @@ class EndToEndTest {
     }
 
     private fun sharpnessRatio(ya: FloatArray, yb: FloatArray, w: Int, h: Int, batch: MaskBatch): Float {
-        var before = 0.0
-        var after = 0.0
+        var worst = 0f
         for (i in 0 until batch.count) {
             val (ex, ey) = extents(batch, i, w.toFloat() / h)
             val cx = batch.geometry[i * MaskBatch.GEOMETRY_STRIDE]
@@ -271,10 +298,13 @@ class EndToEndTest {
             val y0 = ((cy - ey * 0.45f) * h).toInt().coerceIn(1, h - 2)
             val y1 = ((cy + ey * 0.45f) * h).toInt().coerceIn(1, h - 2)
             if (x1 - x0 < 4 || y1 - y0 < 4) continue
-            before += laplacianVariance(ya, w, x0, x1, y0, y1)
-            after += laplacianVariance(yb, w, x0, x1, y0, y1)
+            val before = laplacianVariance(ya, w, x0, x1, y0, y1)
+            val after = laplacianVariance(yb, w, x0, x1, y0, y1)
+            // A patch with almost no detail to begin with cannot show whether it was blurred.
+            if (before < 20.0) continue
+            worst = max(worst, (after / before).toFloat())
         }
-        return if (before <= 0.0) 0f else (after / before).toFloat()
+        return worst
     }
 
     private fun laplacianVariance(y: FloatArray, w: Int, x0: Int, x1: Int, y0: Int, y1: Int): Double {
@@ -348,7 +378,30 @@ class EndToEndTest {
         return if (mse <= 1e-9) 99.0 else 10 * log10(255.0 * 255.0 / mse)
     }
 
-    private suspend fun export(uri: Uri, info: SourceVideoInfo, timeline: MaskTimeline, name: String): ExportReport {
+    /** Scans the saved file again: with every face blurred, the detector must not find a clear face anywhere. */
+    private suspend fun checkNoFaceLeft(report: ExportReport): String {
+        val id = services.projects.newProjectId()
+        try {
+            val rescan = withTimeout(SCAN_TIMEOUT_MS) {
+                services.analyzer.analyze(report.outputUri, report.output, AnalysisOptions.STANDARD, services.projects.thumbnails(id))
+                    .filterIsInstance<AnalysisEvent.Finished>()
+                    .first()
+                    .result
+            }
+            val clear = rescan.tracks.filter { it.meanScore >= 0.6f && it.endUs - it.startUs >= 200_000 }
+            val text = "rescan of the saved file: ${rescan.tracks.size} tracks, ${clear.size} clear faces\n"
+            assertTrue(
+                "faces still detectable in the saved file: " +
+                    clear.joinToString { "track ${it.id} ${it.startUs / 1000}..${it.endUs / 1000} ms score ${"%.2f".format(it.meanScore)}" },
+                clear.isEmpty(),
+            )
+            return text
+        } finally {
+            services.projects.delete(id)
+        }
+    }
+
+    private suspend fun export(uri: Uri, info: SourceVideoInfo, timeline: MaskTimeline, name: String, removeLocation: Boolean): ExportReport {
         val exporter = services.exporter
         instrumentation.runOnMainSync { exporter.reset() }
         val request = ExportRequest(
@@ -357,7 +410,7 @@ class EndToEndTest {
             info = info,
             timeline = timeline,
             quality = ExportQuality.MATCH_SOURCE,
-            removeLocation = false,
+            removeLocation = removeLocation,
         )
         instrumentation.runOnMainSync { exporter.start(request) }
         val end = withTimeout(EXPORT_TIMEOUT_MS) {

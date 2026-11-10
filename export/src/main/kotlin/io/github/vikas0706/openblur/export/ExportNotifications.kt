@@ -63,6 +63,10 @@ internal class ExportNotifications(context: Context) {
         notify(RESULT_ID, notification)
     }
 
+    fun cancelProgress() {
+        manager?.cancel(PROGRESS_ID)
+    }
+
     /** Removes a result notification once the app shows the same result itself. */
     fun clearResult() {
         manager?.cancel(RESULT_ID)

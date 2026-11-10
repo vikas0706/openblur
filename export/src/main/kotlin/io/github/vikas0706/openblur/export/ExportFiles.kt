@@ -21,23 +21,28 @@ internal class ExportFiles(context: Context) {
         if (!directory.isDirectory && !directory.mkdirs() && !directory.isDirectory) {
             throw IOException("Could not create ${directory.absolutePath}")
         }
-        File(directory, "export-${UUID.randomUUID()}$TEMP_SUFFIX")
+        File(directory, "$TEMP_PREFIX${UUID.randomUUID()}$TEMP_SUFFIX")
     }
 
     fun markerFor(tempFile: File): File = File(tempFile.parentFile, tempFile.name.removeSuffix(TEMP_SUFFIX) + MARKER_SUFFIX)
 
-    /** Removes what an export that never finished left behind. Does nothing while an export is running. */
-    fun removeLeftovers() {
+    /**
+     * Removes what an export that never finished left behind. Does nothing while an export is running.
+     * Returns true when something was found, which means an export was cut off before it could save.
+     */
+    fun removeLeftovers(): Boolean {
         synchronized(LOCK) {
             // The lock and this check together keep a new export's temp file out of the sweep.
-            if (ExportSession.state.value is ExportState.Running) return
-            val entries = directory.listFiles() ?: return
+            if (ExportSession.state.value is ExportState.Running) return false
+            val entries = directory.listFiles() ?: return false
+            val interrupted = entries.any { isExportLeftover(it.name) }
             for (entry in entries) {
                 if (entry.name.endsWith(MARKER_SUFFIX)) removeMarked(entry)
             }
             for (entry in entries) {
                 if (entry.exists() && !entry.delete()) Log.w(TAG, "Could not delete ${entry.name}")
             }
+            return interrupted
         }
     }
 
@@ -64,9 +69,14 @@ internal class ExportFiles(context: Context) {
     companion object {
         private const val TAG = "OpenBlurExport"
         private const val DIRECTORY = "exports"
+        private const val TEMP_PREFIX = "export-"
         private const val TEMP_SUFFIX = ".mp4"
         private const val MARKER_SUFFIX = ".pending"
         private val LOCK = Any()
+
+        /** Every export writes a temp file, and a marker once saving starts; both go when the export ends. */
+        fun isExportLeftover(name: String): Boolean =
+            name.startsWith(TEMP_PREFIX) && (name.endsWith(TEMP_SUFFIX) || name.endsWith(MARKER_SUFFIX))
 
         fun writeMarker(marker: File, target: String) {
             try {

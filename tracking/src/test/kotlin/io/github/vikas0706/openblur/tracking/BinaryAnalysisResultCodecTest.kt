@@ -271,6 +271,15 @@ class BinaryAnalysisResultCodecTest {
         }
 
         codec.read(ByteArrayInputStream(fileWithTimes(10, 20)))
+        // A box that cannot be drawn would leave the face unmasked.
+        for (bad in floatArrayOf(Float.NaN, Float.POSITIVE_INFINITY)) {
+            val bytes = fileWithTimes(10, 20)
+            ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).putFloat(8 + 28 + 4 + 20 + 16 + 4, bad)
+            assertThrows(IOException::class.java) { codec.read(ByteArrayInputStream(withChecksum(ByteBuffer.wrap(bytes, 0, bytes.size - 4).also { it.position(bytes.size - 4) }))) }
+        }
+        val noWidth = fileWithTimes(10, 20)
+        ByteBuffer.wrap(noWidth).order(ByteOrder.LITTLE_ENDIAN).putInt(8, 0)
+        assertThrows(IOException::class.java) { codec.read(ByteArrayInputStream(withChecksum(ByteBuffer.wrap(noWidth, 0, noWidth.size - 4).also { it.position(noWidth.size - 4) }))) }
         assertThrows(IOException::class.java) { codec.read(ByteArrayInputStream(fileWithTimes(10))) }
         assertThrows(IOException::class.java) { codec.read(ByteArrayInputStream(fileWithTimes())) }
         assertThrows(IOException::class.java) { codec.read(ByteArrayInputStream(fileWithTimes(10, 10))) }
@@ -283,7 +292,8 @@ class BinaryAnalysisResultCodecTest {
         val oneSample = FaceTrack(1, 1, longArrayOf(5), FloatArray(4), FloatArray(4), ByteArray(1), -1, 0.5f)
         val shortBoxes = FaceTrack(1, 1, longArrayOf(5, 6), FloatArray(7), FloatArray(8), ByteArray(2), -1, 0.5f)
         val unsorted = FaceTrack(1, 1, longArrayOf(6, 5), FloatArray(8), FloatArray(8), ByteArray(2), -1, 0.5f)
-        for (track in listOf(oneSample, shortBoxes, unsorted)) {
+        val nanBox = FaceTrack(1, 1, longArrayOf(5, 6), FloatArray(8) { if (it == 3) Float.NaN else 0.5f }, FloatArray(8), ByteArray(2), -1, 0.5f)
+        for (track in listOf(oneSample, shortBoxes, unsorted, nanBox)) {
             val out = ByteArrayOutputStream()
             assertThrows(IllegalArgumentException::class.java) { codec.write(resultWith(track), out) }
             assertEquals("nothing is written for a refused result", 0, out.size())

@@ -24,6 +24,9 @@ internal class LiveTrack(val serial: Int, val shot: Int) {
         private set
     var matched = false
 
+    /** Set when a new track began next to this one-sample track one run later: likely one face moving too fast to match. */
+    var corroborated = false
+
     /** cx, cy, w, h and their rates of change per second. */
     val state = DoubleArray(8)
 
@@ -50,6 +53,7 @@ internal class LiveTrack(val serial: Int, val shot: Int) {
 
     /** When the track last passed an identity check, and how many it has failed in a row since. */
     var confirmedPtsUs = 0L
+    var confirmedRun = -1
     var strikes = 0
 
     /** Set when the track turned out to be following someone else; it is closed at the end of the run. */
@@ -78,6 +82,13 @@ internal class LiveTrack(val serial: Int, val shot: Int) {
         maxScore = max(maxScore, score)
         lastRun = run
         lastPtsUs = ptsUs
+    }
+
+    /** Drops every sample from [keep] on; the score sum keeps its mean, since single scores are not stored. */
+    fun truncate(keep: Int) {
+        if (keep >= size) return
+        scoreSum = scoreSum * keep / size
+        size = keep
     }
 
     fun startFilter(cx: Float, cy: Float, w: Float, h: Float) {

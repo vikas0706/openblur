@@ -106,26 +106,31 @@ internal fun regionRectPx(k: RegionKeyframe, video: PxRect): PxRect {
 }
 
 /**
- * Centres of the five handles as x,y pairs in [RegionHandle] order. Corner handles sit on the corners of
- * the area grown to at least two touch targets per side, so they never cover each other or the move handle
- * however small the area is. Every centre is then pulled inside [bounds] by half a [touch] target.
+ * Centres of the five handles as x,y pairs in [RegionHandle] order. Corner handles sit on the area's own
+ * corners, so they mark exactly what is blurred. The move handle sits in the middle when the area has room
+ * for it, two [touch] targets each way; otherwise it moves one target outside the area, below, above,
+ * right or left, whichever fits [bounds]. Every centre is then pulled inside [bounds] by half a target.
  */
 internal fun handleCenters(region: PxRect, bounds: PxRect, touch: Float): FloatArray {
-    val growX = max(0f, (2f * touch - region.width) / 2f)
-    val growY = max(0f, (2f * touch - region.height) / 2f)
-    val left = region.left - growX
-    val right = region.right + growX
-    val top = region.top - growY
-    val bottom = region.bottom + growY
     val half = touch / 2f
     fun fitX(x: Float) = if (bounds.width >= touch) x.coerceIn(bounds.left + half, bounds.right - half) else bounds.centerX
     fun fitY(y: Float) = if (bounds.height >= touch) y.coerceIn(bounds.top + half, bounds.bottom - half) else bounds.centerY
+    var moveX = region.centerX
+    var moveY = region.centerY
+    if (region.width < 2f * touch || region.height < 2f * touch) {
+        when {
+            region.bottom + touch + half <= bounds.bottom -> moveY = region.bottom + touch
+            region.top - touch - half >= bounds.top -> moveY = region.top - touch
+            region.right + touch + half <= bounds.right -> moveX = region.right + touch
+            region.left - touch - half >= bounds.left -> moveX = region.left - touch
+        }
+    }
     return floatArrayOf(
-        fitX(region.centerX), fitY(region.centerY),
-        fitX(left), fitY(top),
-        fitX(right), fitY(top),
-        fitX(left), fitY(bottom),
-        fitX(right), fitY(bottom),
+        fitX(moveX), fitY(moveY),
+        fitX(region.left), fitY(region.top),
+        fitX(region.right), fitY(region.top),
+        fitX(region.left), fitY(region.bottom),
+        fitX(region.right), fitY(region.bottom),
     )
 }
 

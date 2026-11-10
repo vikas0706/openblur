@@ -136,19 +136,61 @@ class EditorGeometryTest {
         assertEquals(listOf(400f, 350f, 200f, 200f, 600f, 200f, 200f, 500f, 600f, 500f), c.toList())
     }
 
+    /** Places a w 0.3, h 0.2 area the way the renderer does and checks the corner handles sit on its corners. */
+    private fun assertCornersOnDrawnArea(frameWidth: Int, frameHeight: Int) {
+        val pane = PxRect(0f, 0f, 1080f, 1300f)
+        val touch = 126f
+        val video = fitVideoRect(pane.width, pane.height, frameWidth, frameHeight)
+        val k = RegionKeyframe(0L, 0.5f, 0.5f, 0.3f, 0.2f)
+        // The renderer's half sizes are in frame heights along both mask axes.
+        val aspect = frameWidth.toFloat() / frameHeight
+        val halfW = k.w * 0.5f * aspect * video.height
+        val halfH = k.h * 0.5f * video.height
+        val cx = video.left + k.cx * video.width
+        val cy = video.top + k.cy * video.height
+        val drawn = PxRect(cx - halfW, cy - halfH, cx + halfW, cy + halfH)
+
+        val c = handleCenters(regionRectPx(k, video), pane, touch)
+        val tag = "${frameWidth}x$frameHeight"
+        assertEquals("$tag top left x", drawn.left, c[RegionHandle.TOP_LEFT.ordinal * 2], 0.01f)
+        assertEquals("$tag top left y", drawn.top, c[RegionHandle.TOP_LEFT.ordinal * 2 + 1], 0.01f)
+        assertEquals("$tag top right x", drawn.right, c[RegionHandle.TOP_RIGHT.ordinal * 2], 0.01f)
+        assertEquals("$tag top right y", drawn.top, c[RegionHandle.TOP_RIGHT.ordinal * 2 + 1], 0.01f)
+        assertEquals("$tag bottom left x", drawn.left, c[RegionHandle.BOTTOM_LEFT.ordinal * 2], 0.01f)
+        assertEquals("$tag bottom left y", drawn.bottom, c[RegionHandle.BOTTOM_LEFT.ordinal * 2 + 1], 0.01f)
+        assertEquals("$tag bottom right x", drawn.right, c[RegionHandle.BOTTOM_RIGHT.ordinal * 2], 0.01f)
+        assertEquals("$tag bottom right y", drawn.bottom, c[RegionHandle.BOTTOM_RIGHT.ordinal * 2 + 1], 0.01f)
+    }
+
     @Test
-    fun handlesOfATinyAreaDoNotOverlap() {
+    fun cornerHandlesSitOnTheDrawnAreaOfAWideFrame() = assertCornersOnDrawnArea(1920, 1080)
+
+    @Test
+    fun cornerHandlesSitOnTheDrawnAreaOfATallFrame() = assertCornersOnDrawnArea(1080, 1920)
+
+    @Test
+    fun theMoveHandleOfATinyAreaSitsOutsideIt() {
         val touch = 96f
         val region = PxRect(495f, 495f, 505f, 505f)
         val c = handleCenters(region, PxRect(0f, 0f, 1000f, 1000f), touch)
-        for (a in RegionHandle.entries) for (b in RegionHandle.entries) {
-            if (a.ordinal >= b.ordinal) continue
-            val dx = kotlin.math.abs(c[a.ordinal * 2] - c[b.ordinal * 2])
-            val dy = kotlin.math.abs(c[a.ordinal * 2 + 1] - c[b.ordinal * 2 + 1])
-            assertTrue("$a and $b overlap", dx >= touch - eps || dy >= touch - eps)
+        assertEquals(listOf(495f, 495f, 505f, 495f, 495f, 505f, 505f, 505f), c.toList().drop(2))
+        for (corner in RegionHandle.entries) {
+            if (corner == RegionHandle.MOVE) continue
+            val dx = kotlin.math.abs(c[0] - c[corner.ordinal * 2])
+            val dy = kotlin.math.abs(c[1] - c[corner.ordinal * 2 + 1])
+            assertTrue("move and $corner overlap", dx >= touch - eps || dy >= touch - eps)
         }
-        assertEquals(RegionHandle.MOVE, hitHandle(c, 500f, 500f, touch))
-        assertEquals(RegionHandle.TOP_LEFT, hitHandle(c, 404f, 404f, touch))
+        assertEquals(RegionHandle.MOVE, hitHandle(c, c[0], c[1], touch))
+        assertEquals(RegionHandle.TOP_LEFT, hitHandle(c, 480f, 480f, touch))
+        assertEquals(RegionHandle.BOTTOM_RIGHT, hitHandle(c, 520f, 520f, touch))
+    }
+
+    @Test
+    fun theMoveHandleGoesAboveWhenThereIsNoRoomBelow() {
+        val touch = 96f
+        val c = handleCenters(PxRect(450f, 900f, 550f, 950f), PxRect(0f, 0f, 1000f, 1000f), touch)
+        assertEquals(500f, c[0], eps)
+        assertEquals(900f - touch, c[1], eps)
     }
 
     @Test

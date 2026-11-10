@@ -11,6 +11,7 @@ import io.github.vikas0706.openblur.core.MaskStyle
 import io.github.vikas0706.openblur.core.Person
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -410,6 +411,50 @@ class EditorViewModelTest {
         vm.seekTo(6_000_000L)
         vm.setFollowMotion(id, true)
         assertEquals(listOf(0L, 6_000_000L), regionOf(vm.edit, id)!!.keyframes.map { it.timeUs })
+    }
+
+    @Test
+    fun undoingFollowMotionTurnsTheSwitchOffAgain() {
+        val vm = model()
+        vm.addArea()
+        val id = vm.edit.regions.single().id
+        vm.seekTo(6_000_000L)
+        vm.setFollowMotion(id, true)
+        assertTrue(vm.followsMotion(id))
+
+        vm.undo()
+        assertEquals(1, regionOf(vm.edit, id)!!.keyframes.size)
+        assertFalse(vm.followsMotion(id))
+        vm.redo()
+        assertTrue(vm.followsMotion(id))
+    }
+
+    @Test
+    fun undoingAnotherEditKeepsFollowMotionArmed() {
+        val vm = model()
+        vm.addArea()
+        val id = vm.edit.regions.single().id
+        vm.setTrackBlurred(3, false)
+        vm.selectRegion(id)
+        vm.setFollowMotion(id, true)
+        vm.undo()
+        assertEquals(emptySet<Int>(), vm.edit.visibleTrackIds)
+        assertTrue(vm.followsMotion(id))
+    }
+
+    @Test
+    fun theSameAnnouncementTwiceInARowChangesTheLiveRegionText() {
+        val vm = model()
+        vm.setTrackBlurred(3, false)
+        vm.setTrackBlurred(1, false)
+        vm.undo()
+        val first = vm.state.value.announcement!!
+        vm.undo()
+        val second = vm.state.value.announcement!!
+        assertEquals(first.event, second.event)
+        assertNotEquals(liveRegionText("Undone", first.serial), liveRegionText("Undone", second.serial))
+        assertEquals("Undone", liveRegionText("Undone", second.serial).trim())
+        assertEquals("", liveRegionText("", 1))
     }
 
     @Test

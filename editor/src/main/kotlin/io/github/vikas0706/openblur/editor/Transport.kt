@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -166,6 +167,8 @@ private fun Scrubber(
         modifier = modifier
             .fillMaxWidth()
             .height(OpenBlurDimens.MinTouchTarget)
+            // The track's ends sit inside the system back-gesture zones; a drag from there must scrub, not leave.
+            .systemGestureExclusion()
             .onKeyEvent { event ->
                 if (!enabled || event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 val forward = if (rtl) Key.DirectionLeft else Key.DirectionRight

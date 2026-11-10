@@ -99,6 +99,12 @@ internal fun appearanceFor(edit: EditState, selection: Selection): MaskAppearanc
     is Selection.OfRegion -> regionOf(edit, selection.regionId)?.appearance ?: edit.appearance
 }
 
+/**
+ * The text for the announcer's live region. Every other [serial] adds a trailing space, which is not spoken,
+ * so the same event twice in a row still changes the text and is said again.
+ */
+internal fun liveRegionText(text: String, serial: Int): String = if (text.isEmpty() || serial % 2 == 0) text else "$text "
+
 /** `m:ss.t`, for ranges where whole seconds would make a short appearance start and end at the same time. */
 internal fun formatTenthsUs(timeUs: Long): String {
     val tenths = if (timeUs <= 0L) 0L else timeUs / 100_000L

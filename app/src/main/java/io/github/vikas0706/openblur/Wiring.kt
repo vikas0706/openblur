@@ -10,6 +10,8 @@ import io.github.vikas0706.openblur.api.MaskEffectFactory
 import io.github.vikas0706.openblur.api.ProjectStore
 import io.github.vikas0706.openblur.api.SourceInspector
 import io.github.vikas0706.openblur.api.VideoAnalyzer
+import io.github.vikas0706.openblur.core.FaceDetector
+import io.github.vikas0706.openblur.core.FaceDetectorFactory
 import io.github.vikas0706.openblur.core.MaskTimelineFactory
 import io.github.vikas0706.openblur.editing.BinaryEditStateCodec
 import io.github.vikas0706.openblur.editing.DefaultEncoderPolicy
@@ -23,6 +25,13 @@ import io.github.vikas0706.openblur.vision.OrtFaceDetectorFactory
 import io.github.vikas0706.openblur.vision.SFaceEmbedder
 
 internal object Wiring {
+    /** Reads the model on the scan's own thread the first time a detector is needed, never on the main thread. */
+    private class LazyDetectors(load: () -> FaceDetectorFactory) : FaceDetectorFactory {
+        private val factory by lazy(load)
+
+        override fun create(inputWidth: Int, inputHeight: Int): FaceDetector = factory.create(inputWidth, inputHeight)
+    }
+
     fun create(app: Application): AppServices = RealServices(app)
 
     private class RealServices(app: Application) : AppServices {
@@ -40,7 +49,7 @@ internal object Wiring {
         override val analyzer: VideoAnalyzer by lazy {
             Media3VideoAnalyzer(
                 context = app,
-                detectors = OrtFaceDetectorFactory(models.detectorModel(), detectorThreads),
+                detectors = LazyDetectors { OrtFaceDetectorFactory(models.detectorModel(), detectorThreads) },
                 embedderProvider = { SFaceEmbedder(models.embedderModel()) },
                 analyzers = DefaultFaceAnalyzerFactory(),
             )

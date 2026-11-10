@@ -76,6 +76,7 @@ internal fun HomeScreen(
     onDeleteProject: (String) -> Unit,
     onRetryList: () -> Unit,
     onDismissNotice: () -> Unit,
+    onDismissInterrupted: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var pendingDelete by remember { mutableStateOf<ProjectSummary?>(null) }
@@ -97,7 +98,7 @@ internal fun HomeScreen(
                 contentPadding = PaddingValues(OpenBlurDimens.ScreenPadding),
             ) {
                 item(key = "intro") {
-                    Intro(home.notice, onChooseVideo, onDismissNotice)
+                    Intro(home, onChooseVideo, onDismissNotice, onDismissInterrupted)
                 }
                 item(key = "heading") {
                     Spacer(Modifier.height(OpenBlurDimens.SectionGap))
@@ -147,8 +148,22 @@ internal fun HomeScreen(
 }
 
 @Composable
-private fun Intro(notice: HomeNotice?, onChooseVideo: () -> Unit, onDismissNotice: () -> Unit) {
+private fun Intro(
+    home: HomeUi,
+    onChooseVideo: () -> Unit,
+    onDismissNotice: () -> Unit,
+    onDismissInterrupted: () -> Unit,
+) {
+    val notice = home.notice
     Column(verticalArrangement = Arrangement.spacedBy(OpenBlurDimens.ItemGap)) {
+        if (home.exportInterrupted) {
+            Notice(
+                text = stringResource(R.string.home_notice_export_interrupted),
+                tone = NoticeTone.Warning,
+                actionLabel = stringResource(R.string.action_dismiss),
+                onAction = onDismissInterrupted,
+            )
+        }
         if (notice != null) {
             Notice(
                 text = stringResource(

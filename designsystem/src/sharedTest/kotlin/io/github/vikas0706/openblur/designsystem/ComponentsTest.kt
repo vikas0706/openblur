@@ -46,8 +46,11 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.style.ResolvedTextDirection
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -380,6 +383,34 @@ class ComponentsTest {
         rule.onNodeWithText("1:02:05").assertContentDescriptionEquals("1 hour 2 minutes 5 seconds")
         timeUs = 120_000_000L
         rule.onNodeWithText("2:00").assertContentDescriptionEquals("2 minutes")
+    }
+
+    @Test
+    fun rightToLeftLayout_keepsEachTextInItsOwnDirection() {
+        rule.setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                OpenBlurTheme {
+                    Column {
+                        Notice(text = "The copy is converted to standard colours.", tone = NoticeTone.Warning)
+                        SectionHeading(text = "Delete this scan?")
+                        SectionHeading(text = "מקור")
+                    }
+                }
+            }
+        }
+        fun layout(text: String): TextLayoutResult {
+            val node = rule.onNode(hasText(text), useUnmergedTree = true).fetchSemanticsNode()
+            val results = mutableListOf<TextLayoutResult>()
+            node.config[SemanticsActions.GetTextLayoutResult].action!!.invoke(results)
+            return results.single()
+        }
+        // The app ships English only, so an RTL locale must not move a sentence's full stop or question mark to the left.
+        for (text in listOf("The copy is converted to standard colours.", "Delete this scan?")) {
+            val result = layout(text)
+            assertEquals(text, ResolvedTextDirection.Ltr, result.getParagraphDirection(0))
+            assertTrue(text, result.getBoundingBox(text.length - 1).left > result.getBoundingBox(0).left)
+        }
+        assertEquals(ResolvedTextDirection.Rtl, layout("מקור").getParagraphDirection(0))
     }
 
     @Test

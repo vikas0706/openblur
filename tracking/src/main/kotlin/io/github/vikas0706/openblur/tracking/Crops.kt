@@ -83,8 +83,7 @@ internal class LiveCropSource(
         val half = side * 0.5f
         val cx = (box[index * 4] * frameWidth).coerceIn(half, frameWidth - half)
         val cy = (box[index * 4 + 1] * frameHeight).coerceIn(half, frameHeight - half)
-        // The corners name pixel centers, so they sit half an output pixel inside the square.
-        val reach = half - side / (2 * size)
+        val reach = half
         corners[0] = (cx - reach) / frameWidth
         corners[1] = (cy - reach) / frameHeight
         corners[2] = (cx + reach) / frameWidth

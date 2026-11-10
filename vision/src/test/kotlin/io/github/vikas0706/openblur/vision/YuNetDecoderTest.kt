@@ -156,6 +156,19 @@ class YuNetDecoderTest {
     }
 
     @Test
+    fun anAnchorWithLandmarksThatAreNotFiniteSuppressesNothing() {
+        val outputs = Outputs(128, 128)
+        outputs.face(0, 5, 5, 0.9f, 44f, 44f, 20f, 20f)
+        outputs.kps[0].put(outputs.index(0, 5, 5) * 10 + 4, Float.NaN)
+        outputs.face(0, 6, 5, 0.8f, 46f, 45f, 20f, 20f)
+
+        val found = outputs.decode().single()
+
+        assertEquals(0.8f, found.score, EPS)
+        assertEquals(46f / 128, found.cx, EPS)
+    }
+
+    @Test
     fun considersOnlyTheStrongestFiveThousandCandidates() {
         val outputs = Outputs(640, 640)
         val total = outputs.decoder.anchorCounts.sum()

@@ -25,6 +25,18 @@
         android:largeHeap="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.OpenBlur"
-        tools:targetApi="37" />
+        tools:targetApi="37">
+
+        <!-- The emoji initializer asks Google Play services for fonts; the app shows no emoji, so it is removed. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+                tools:node="remove" />
+        </provider>
+    </application>
 
 </manifest>

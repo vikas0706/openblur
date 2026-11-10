@@ -36,7 +36,7 @@ internal class YuNetDecoder(inputWidth: Int, inputHeight: Int) {
         contentWidth: Int,
         contentHeight: Int,
     ): List<Detection> {
-        val count = collectCandidates(cls, obj, bbox, contentWidth.toFloat(), contentHeight.toFloat())
+        val count = collectCandidates(cls, obj, bbox, kps, contentWidth.toFloat(), contentHeight.toFloat())
         if (count == 0) return emptyList()
         sortAscending(order, count)
         val keptCount = suppress(count)
@@ -85,6 +85,7 @@ internal class YuNetDecoder(inputWidth: Int, inputHeight: Int) {
         cls: Array<FloatArray>,
         obj: Array<FloatArray>,
         bbox: Array<FloatBuffer>,
+        kps: Array<FloatBuffer>,
         contentW: Float,
         contentH: Float,
     ): Int {
@@ -116,6 +117,8 @@ internal class YuNetDecoder(inputWidth: Int, inputHeight: Int) {
                 val x2 = minOf(cx + halfW, contentW)
                 val y2 = minOf(cy + halfH, contentH)
                 if (!(x2 > x1 && y2 > y1)) continue
+                // Rejected here, not after suppression, so an anchor that is dropped cannot hide a real face.
+                if (!landmarksFinite(kps[level], index)) continue
 
                 scores[count] = score
                 boxes[4 * count] = x1
@@ -130,6 +133,13 @@ internal class YuNetDecoder(inputWidth: Int, inputHeight: Int) {
             }
         }
         return count
+    }
+
+    private fun landmarksFinite(points: FloatBuffer, index: Int): Boolean {
+        for (k in index * 10 until index * 10 + 10) {
+            if (!points.get(k).isFinite()) return false
+        }
+        return true
     }
 
     /** Greedy suppression over the best [TOP_K] candidates, strongest first. Returns the number kept. */

@@ -190,6 +190,18 @@ class ShellFlowTest {
     }
 
     @Test
+    fun videoSharedOnlyAsClipData_startsScanning() {
+        fake.fakeAnalyzer.hold = CompletableDeferred()
+        val intent = Intent(app, MainActivity::class.java)
+            .setAction(Intent.ACTION_SEND)
+            .setType("video/mp4")
+        intent.clipData = android.content.ClipData.newRawUri(null, Samples.sourceUri)
+        launch(intent)
+        waitForText(string(R.string.scan_title))
+        assertEquals(1, fake.fakeAnalyzer.runs)
+    }
+
+    @Test
     fun videoOpenedFromAnotherApp_startsScanning() {
         fake.fakeAnalyzer.hold = CompletableDeferred()
         val intent = Intent(app, MainActivity::class.java)
@@ -216,7 +228,7 @@ class ShellFlowTest {
         click(string(R.string.scan_cancel_confirm))
         waitForText(string(R.string.home_headline))
         assertEquals(1, fake.fakeAnalyzer.cancelled)
-        assertEquals(2, fake.fakeProjects.deleteAbandonedCalls)
+        assertEquals(1, fake.fakeProjects.discarded.size)
         assertTrue(fake.fakeProjects.ids().isEmpty())
     }
 
@@ -527,6 +539,20 @@ class ShellFlowTest {
             rule.onAllNodesWithText("BSD 3-Clause License", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
         click(string(R.string.about_hide_bsd))
+
+        // ONNX Runtime is MIT licensed and links third-party code; both notices must ship in the APK.
+        click(string(R.string.about_show_onnx))
+        rule.waitUntil(TIMEOUT_MS) {
+            rule.onAllNodesWithText("Copyright (c) Microsoft Corporation", substring = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        click(string(R.string.about_hide_onnx))
+        click(string(R.string.about_show_onnx_notices))
+        rule.waitUntil(TIMEOUT_MS) {
+            rule.onAllNodesWithText("THIRD PARTY SOFTWARE NOTICES", substring = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        click(string(R.string.about_hide_onnx_notices))
 
         rule.onNodeWithContentDescription(string(DesignR.string.designsystem_back))
             .performClick()

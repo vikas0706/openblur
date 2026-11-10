@@ -123,6 +123,11 @@ internal class ShellViewModel(
                 }
             }
         }
+        viewModelScope.launch {
+            services.exporter.interrupted.collect { interrupted ->
+                _home.update { it.copy(exportInterrupted = interrupted) }
+            }
+        }
         restore()
         refreshProjects()
     }
@@ -214,6 +219,10 @@ internal class ShellViewModel(
         _home.update { it.copy(notice = null) }
     }
 
+    fun dismissInterruptedExport() {
+        services.exporter.dismissInterrupted()
+    }
+
     fun refreshProjects() {
         listJob?.cancel()
         listJob = viewModelScope.launch {
@@ -301,7 +310,7 @@ internal class ShellViewModel(
     }
 
     private suspend fun runScan(uri: Uri, thorough: Boolean, replaceId: String?) {
-        var unsaved = false
+        var unsavedId: String? = null
         try {
             val name = try {
                 services.inspector.displayName(uri)
@@ -319,7 +328,7 @@ internal class ShellViewModel(
 
             val options = if (thorough) AnalysisOptions.THOROUGH else AnalysisOptions.STANDARD
             val projectId = services.projects.newProjectId()
-            unsaved = true
+            unsavedId = projectId
             val thumbnails = services.projects.thumbnails(projectId)
             var result: AnalysisResult? = null
             services.analyzer.analyze(uri, info, options, thumbnails).collect { event ->
@@ -350,7 +359,7 @@ internal class ShellViewModel(
             } catch (e: Exception) {
                 throw ScanSaveException(e)
             }
-            unsaved = false
+            unsavedId = null
             if (replaceId != null) {
                 try {
                     services.projects.delete(replaceId)
@@ -364,10 +373,10 @@ internal class ShellViewModel(
             showEditor(project)
             refreshProjects()
         } catch (e: CancellationException) {
-            if (unsaved) discardUnsavedScan()
+            unsavedId?.let { discardUnsavedScan(it) }
             throw e
         } catch (e: Throwable) {
-            if (unsaved) discardUnsavedScan()
+            unsavedId?.let { discardUnsavedScan(it) }
             // A scan that was cancelled can still fail while it shuts down; that must not mark its successor as failed.
             if (!currentCoroutineContext().isActive) return
             updateScan { it.copy(stage = ScanStage.Failed(scanFailureOf(e))) }
@@ -387,10 +396,11 @@ internal class ShellViewModel(
         return EditState(appearance = old.appearance, regions = old.regions)
     }
 
-    private suspend fun discardUnsavedScan() {
+    /** Called once the analyzer flow has ended, so the scan no longer needs its folder. */
+    private suspend fun discardUnsavedScan(projectId: String) {
         withContext(NonCancellable) {
             try {
-                services.projects.deleteAbandoned()
+                services.projects.discardUnsaved(projectId)
             } catch (_: Exception) {
                 // Removed at the next start instead.
             }
@@ -424,9 +434,35 @@ internal class ShellViewModel(
         val replaceId = saved.get<String>(KEY_SCAN_REPLACE)
         scanReturn = null
         when {
-            back != null -> showEditor(back)
+            back != null -> returnToEditor(back)
             replaceId != null -> openProject(replaceId)
             else -> showHome()
+        }
+    }
+
+    /** Leaves a failed scan of a new video and opens the picker, as its button says. */
+    fun chooseAnotherVideo() {
+        val current = base.value as? Base.Scanning ?: return
+        cancelScan()
+        if (!current.scan.isRescan) requestPick()
+    }
+
+    /** [stored] carries the edit from when it was opened; the editor has saved newer choices since. */
+    private fun returnToEditor(stored: Project) {
+        openJob?.cancel()
+        saved[KEY_SCREEN] = SCREEN_EDITOR
+        saved[KEY_PROJECT_ID] = stored.id
+        base.value = Base.Opening
+        openJob = viewModelScope.launch {
+            val edit = try {
+                services.projects.load(stored.id)?.edit
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            if (base.value !is Base.Opening) return@launch
+            showEditor(if (edit == null) stored else stored.withEdit(edit))
         }
     }
 

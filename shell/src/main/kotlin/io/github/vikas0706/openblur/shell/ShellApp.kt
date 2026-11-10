@@ -88,6 +88,7 @@ internal fun ShellApp(
                 onDeleteProject = viewModel::deleteProject,
                 onRetryList = viewModel::refreshProjects,
                 onDismissNotice = viewModel::dismissHomeNotice,
+                onDismissInterrupted = viewModel::dismissInterruptedExport,
             )
             Screen.About -> AboutScreen(onBack = viewModel::showHome)
             is Screen.Scanning -> ScanningScreen(
@@ -96,6 +97,7 @@ internal fun ShellApp(
                 onDismissBusyNotice = viewModel::dismissBusyNotice,
                 onCancel = viewModel::cancelScan,
                 onRetry = viewModel::retryScan,
+                onChooseAnother = viewModel::chooseAnotherVideo,
             )
             Screen.OpeningProject -> OpeningScreen(onBack = viewModel::showHome)
             is Screen.Editor -> {

@@ -1,0 +1,1 @@
+Blur the faces you choose in a video. Runs on your phone, nothing is uploaded.

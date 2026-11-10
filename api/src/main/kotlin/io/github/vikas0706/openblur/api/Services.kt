@@ -14,7 +14,9 @@ import io.github.vikas0706.openblur.core.SourceVideoInfo
 import io.github.vikas0706.openblur.core.ThumbnailStore
 import java.io.File
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /** Everything the UI needs, built once by the Application. The UI depends on these interfaces only. */
 interface AppServices {
@@ -130,6 +132,14 @@ interface ProjectStore {
 
     /** Removes folders of scans that were started but never saved. */
     suspend fun deleteAbandoned()
+
+    /**
+     * Removes the folder of [projectId] if it was never saved, for a scan that has ended without a result.
+     * Does nothing for a saved project.
+     */
+    suspend fun discardUnsaved(projectId: String) {
+        deleteAbandoned()
+    }
 }
 
 data class ExportRequest(
@@ -200,4 +210,14 @@ interface ExportController {
 
     /** Moves a finished, failed or cancelled state back to [ExportState.Idle]. */
     fun reset()
+
+    /**
+     * True when an export was still running when the app's process last ended, so its video was never saved.
+     * Becomes true shortly after start, once leftovers have been checked, and stays true until [dismissInterrupted].
+     */
+    val interrupted: StateFlow<Boolean> get() = NeverInterrupted
+
+    fun dismissInterrupted() {}
 }
+
+private val NeverInterrupted: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()

@@ -63,32 +63,34 @@ internal class ExactDecoderFactory(
         }
         val result = calibration.resultFor(mime)
         lastChoice = result.verdict
-        if (format.colorInfo?.colorSpace.let { it == null || it == Format.NO_VALUE }) {
-            val decoderName = when (result.verdict) {
-                DecoderCalibration.Verdict.SOFTWARE_ONLY -> result.softwareName
-                else -> result.hardwareName ?: result.softwareName
+        val untagged = format.colorInfo?.colorSpace.let { it == null || it == Format.NO_VALUE }
+        val filterOff = result.verdict == DecoderCalibration.Verdict.HARDWARE_WITH_FILTER_OFF
+        var codec = if (filterOff) createWithFilterOff(format, outputSurface, result.hardwareName!!) else null
+        // The filtered hardware output is what calibration rejected, so the software decoder is preferred over it.
+        val useSoftware = (result.verdict == DecoderCalibration.Verdict.SOFTWARE_ONLY || (filterOff && codec == null)) &&
+            softwareCanDecode(format)
+        if (result.verdict == DecoderCalibration.Verdict.SOFTWARE_ONLY && !useSoftware) {
+            Log.w(TAG, "No software decoder takes ${format.width}x${format.height}; using the hardware decoder")
+        }
+        if (codec == null) {
+            codec = if (useSoftware) {
+                softwareOnly.createForVideoDecoding(format, outputSurface, requestSdrToneMapping, logSessionId)
+            } else {
+                default.createForVideoDecoding(format, outputSurface, requestSdrToneMapping, logSessionId)
             }
-            val filterOff = result.verdict == DecoderCalibration.Verdict.HARDWARE_WITH_FILTER_OFF
+        }
+        if (untagged) {
+            // Measured on the decoder that was actually created, since the GPU's matrix can differ per decoder.
+            val decoderName = codec.name
+            val measuredFilterOff = filterOff && !useSoftware && decoderName == result.hardwareName
             val media3Format = MediaFormatUtil.createMediaFormatFromFormat(format)
             val colorKeys = DecoderCalibration.COLOR_KEYS.filter { media3Format.containsKey(it) }.associateWith { media3Format.getInteger(it) }
-            val measured = decoderName?.let { calibration.untaggedColorSpace(mime, it, filterOff, format.width, format.height, colorKeys) }
+            val measured = calibration.untaggedColorSpace(mime, decoderName, measuredFilterOff, format.width, format.height, colorKeys)
             // Without a measurement, keep Media3's own assumption (BT.709) rather than guess.
             untaggedColorSpace = measured
             Log.i(TAG, "Untagged stream converts to RGB as colour space $measured")
         }
-        return when (result.verdict) {
-            DecoderCalibration.Verdict.HARDWARE_WITH_FILTER_OFF ->
-                createWithFilterOff(format, outputSurface, result.hardwareName!!)
-                    ?: default.createForVideoDecoding(format, outputSurface, requestSdrToneMapping, logSessionId)
-            DecoderCalibration.Verdict.SOFTWARE_ONLY ->
-                if (softwareCanDecode(format)) {
-                    softwareOnly.createForVideoDecoding(format, outputSurface, requestSdrToneMapping, logSessionId)
-                } else {
-                    Log.w(TAG, "No software decoder takes ${format.width}x${format.height}; using the hardware decoder")
-                    default.createForVideoDecoding(format, outputSurface, requestSdrToneMapping, logSessionId)
-                }
-            else -> default.createForVideoDecoding(format, outputSurface, requestSdrToneMapping, logSessionId)
-        }
+        return codec
     }
 
     private fun softwareCanDecode(format: Format): Boolean {

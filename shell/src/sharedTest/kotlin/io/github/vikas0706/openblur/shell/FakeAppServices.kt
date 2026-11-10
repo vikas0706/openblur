@@ -172,6 +172,14 @@ class FakeExporter : ExportController {
         if (mutableState.value !is ExportState.Running) mutableState.value = ExportState.Idle
     }
 
+    /** Set to true to stand for an export cut off when the process last ended. */
+    val interruptedFlag = MutableStateFlow(false)
+    override val interrupted: StateFlow<Boolean> get() = interruptedFlag
+
+    override fun dismissInterrupted() {
+        interruptedFlag.value = false
+    }
+
     fun emit(state: ExportState) {
         mutableState.value = state
     }
@@ -243,6 +251,12 @@ class FakeProjects : ProjectStore {
 
     override suspend fun deleteAbandoned() {
         deleteAbandonedCalls++
+    }
+
+    val discarded = mutableListOf<String>()
+
+    override suspend fun discardUnsaved(projectId: String) {
+        discarded += projectId
     }
 }
 

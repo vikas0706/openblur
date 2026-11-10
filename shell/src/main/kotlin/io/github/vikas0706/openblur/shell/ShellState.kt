@@ -98,4 +98,6 @@ internal enum class HomeNotice { PROJECT_UNAVAILABLE, DELETE_FAILED, NO_PICKER }
 internal data class HomeUi(
     val projects: ProjectListUi = ProjectListUi.Loading,
     val notice: HomeNotice? = null,
+    /** The app's process ended while an export was running, so that video was never saved. */
+    val exportInterrupted: Boolean = false,
 )

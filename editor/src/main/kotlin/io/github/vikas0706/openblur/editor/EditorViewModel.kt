@@ -142,10 +142,14 @@ internal class EditorViewModel(
         publish(next, event)
     }
 
-    private fun publish(next: EditState, event: EditorEvent?) {
+    private fun publish(next: EditState, event: EditorEvent?, fromHistory: Boolean = false) {
         val state = current
         val selection = state.selection.takeIf { isValid(it, next) } ?: Selection.None
-        val armed = state.motionArmedRegionId?.takeIf { selection == Selection.OfRegion(it) }
+        // Undoing or redoing the area's positions also undoes the Follow motion switch that went with them.
+        val armed = state.motionArmedRegionId?.takeIf { id ->
+            selection == Selection.OfRegion(id) &&
+                (!fromHistory || regionOf(state.edit, id)?.keyframes == regionOf(next, id)?.keyframes)
+        }
         _state.value = state.copy(
             edit = next,
             canUndo = undoStack.isNotEmpty(),
@@ -176,14 +180,14 @@ internal class EditorViewModel(
         if (undoStack.isEmpty()) return
         endGesture()
         redoStack.addLast(edit)
-        publish(undoStack.removeLast(), EditorEvent.Undone)
+        publish(undoStack.removeLast(), EditorEvent.Undone, fromHistory = true)
     }
 
     fun redo() {
         if (redoStack.isEmpty()) return
         endGesture()
         undoStack.addLast(edit)
-        publish(redoStack.removeLast(), EditorEvent.Redone)
+        publish(redoStack.removeLast(), EditorEvent.Redone, fromHistory = true)
     }
 
     fun onPlayingChanged(isPlaying: Boolean) {

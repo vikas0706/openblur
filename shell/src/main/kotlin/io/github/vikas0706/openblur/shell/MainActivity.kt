@@ -55,7 +55,9 @@ class MainActivity : ComponentActivity() {
         // Reopening the app from Recents replays the old intent; the video in it was already handled.
         if (intent != null && intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return
         val uri = when (intent?.action) {
+            // Some apps put the video only in the ClipData, which also carries the read grant.
             Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+                ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
             Intent.ACTION_VIEW -> intent.data
             else -> null
         } ?: return

@@ -1,0 +1,15 @@
+OpenBlur blurs the faces you choose in a video. It finds every face, groups the faces by person, and lets you pick who stays visible. Then it saves a new copy. Your original video is not changed.
+
+Everything happens on your phone. OpenBlur has no network permission, so it cannot upload your video. You can check this in the app info screen.
+
+What you can do:
+* Blur everyone, or tap a person to leave them visible
+* Choose blur, mosaic or a solid colour, in an oval, a rectangle or a band across the eyes
+* Give one person their own style
+* Draw areas for a missed face, a number plate or a screen, and make them follow motion
+* Watch a live preview with the same effect that goes into the saved file
+* Reopen a scanned video later without scanning it again
+
+The saved copy keeps the original's resolution, rotation, frame timing and codec. The encoder is asked for a bitrate a little above the original's. The audio track is copied unchanged. After saving, OpenBlur reads the new file back and shows it next to the original, so you can check the result yourself.
+
+OpenBlur is free software under the GPL-3.0-or-later licence. There are no ads and no in-app purchases.

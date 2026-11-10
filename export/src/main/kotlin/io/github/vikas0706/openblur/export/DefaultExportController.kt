@@ -18,7 +18,9 @@ import io.github.vikas0706.openblur.core.ExportQuality
 import io.github.vikas0706.openblur.core.SourceVideoInfo
 import kotlin.concurrent.thread
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
 /**
@@ -35,12 +37,22 @@ class DefaultExportController(
     private val mainHandler = Handler(Looper.getMainLooper())
     private val notifications = ExportNotifications(appContext)
 
+    private val interruptedFlag = MutableStateFlow(false)
+
     init {
         AppVisibility.register(appContext)
-        thread(name = "OpenBlurExportCleanup", isDaemon = true) { ExportFiles(appContext).removeLeftovers() }
+        thread(name = "OpenBlurExportCleanup", isDaemon = true) {
+            if (ExportFiles(appContext).removeLeftovers()) interruptedFlag.value = true
+        }
     }
 
     override val state: StateFlow<ExportState> get() = ExportSession.state
+
+    override val interrupted: StateFlow<Boolean> = interruptedFlag.asStateFlow()
+
+    override fun dismissInterrupted() {
+        interruptedFlag.value = false
+    }
 
     override suspend fun plan(info: SourceVideoInfo, quality: ExportQuality): List<EncodePlan> =
         // Listing codecs is a call into the media service, so it stays off the main thread.

@@ -162,10 +162,29 @@ internal class ProjectFiles(
         summaries
     }
 
-    suspend fun delete(id: String) {
-        if (!isValidId(id)) return
-        writing(id) { remove(id) }
+    /** Returns the deleted project's source Uri when no other saved project refers to it, otherwise null. */
+    suspend fun delete(id: String): String? {
+        if (!isValidId(id)) return null
+        var orphaned: String? = null
+        writing(id) {
+            val source = readMetaOrNull(folder(id))?.sourceUri
+            remove(id)
+            if (source != null && !isSourceOfAnyProject(source)) orphaned = source
+        }
+        return orphaned
     }
+
+    /** Removes [id]'s folder unless the project was saved, so an ended scan's pictures go at once. */
+    suspend fun discardUnsaved(id: String) {
+        if (!isValidId(id)) return
+        writing(id) {
+            if (!metaFile(folder(id)).exists()) remove(id)
+        }
+    }
+
+    // Reads other projects without their locks: meta.bin is only ever replaced whole.
+    private fun isSourceOfAnyProject(sourceUri: String): Boolean =
+        projectFolders().any { readMetaOrNull(it)?.sourceUri == sourceUri }
 
     /** Removes folders without metadata, last written over [ABANDONED_AFTER_MS] ago, that are not in use here. */
     suspend fun deleteAbandoned() = withContext(io) {

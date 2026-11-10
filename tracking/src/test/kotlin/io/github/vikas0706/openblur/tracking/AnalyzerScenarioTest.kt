@@ -335,6 +335,18 @@ class AnalyzerScenarioTest {
     }
 
     @Test
+    fun fastFaceBelowTheKeepScoreIsNotDropped() {
+        val scan = Scan()
+        // A small face moving a face width per frame never overlaps its last box, so every run starts a new track.
+        for (i in 0 until 20) scan.frame(at30(i), listOf(Face(1, 200f + i * 60f, 500f, 60f, score = 0.65f)))
+        val result = scan.finish(at30(20))
+
+        val covered = result.tracks.flatMap { it.detectedTimes() }.sorted()
+        assertEquals((0 until 20).map { at30(it) }, covered)
+        assertEquals(emptyList<String>(), scan.thumbnails.errors)
+    }
+
+    @Test
     fun twoDetectionsBelowTheKeepScoreAreKept() {
         val scan = Scan()
         for (i in 0 until 40) scan.frame(at30(i), if (i == 15 || i == 16) listOf(Face(1, 800f, 500f, 180f, score = 0.62f)) else emptyList())
@@ -506,12 +518,27 @@ class AnalyzerScenarioTest {
         for (i in 0 until 120) scan.frame(at30(i), listOf(Face(if (i < 45) 1 else 2, 800f, 500f, 200f)))
         val result = scan.finish(at30(120))
 
-        assertEquals(2, result.tracks.size)
-        assertEquals(2, result.people.size)
-        val handOver = result.tracks[0].detectedTimes().last()
-        assertTrue("the first track ends within about a second of the swap: $handOver", handOver in at30(45)..at30(45) + 1_100_000)
-        assertEquals(1, scan.thumbnails.live[result.tracks[0].thumbnailHandle])
-        assertEquals(2, scan.thumbnails.live[result.tracks[1].thumbnailHandle])
+        // Until the check fails, the track follows the second face; that stretch must not count as the first person.
+        assertNoStrangerUnderThePerson(result, firstPersonUntil = at30(45))
+        val first = result.tracks[0]
+        val last = result.tracks.last()
+        assertEquals(1, scan.thumbnails.live[first.thumbnailHandle])
+        assertEquals(2, scan.thumbnails.live[last.thumbnailHandle])
+        assertTrue("the second face gets its own track within about a second", last.detectedTimes().first() <= at30(45) + 1_100_000)
+        assertTrue(scan.thumbnails.errors.toString(), scan.thumbnails.errors.isEmpty())
+        assertEquals(result.tracks.size, result.people.size)
+        val covered = result.tracks.flatMap { it.detectedTimes() }.sorted()
+        assertEquals("every frame keeps its box", (0 until 120).map { at30(it) }, covered)
+    }
+
+    /** The person of the first track holds no detection from after [firstPersonUntil]. */
+    private fun assertNoStrangerUnderThePerson(result: io.github.vikas0706.openblur.core.AnalysisResult, firstPersonUntil: Long) {
+        val person = result.tracks[0].personId
+        for (track in result.tracks) {
+            if (track.personId != person) continue
+            val late = track.detectedTimes().filter { it >= firstPersonUntil }
+            assertTrue("track ${track.id} of the first person holds the second face at $late", late.isEmpty())
+        }
     }
 
     @Test
@@ -524,11 +551,11 @@ class AnalyzerScenarioTest {
         }
         val result = scan.finish(at30(150))
 
-        assertEquals(2, result.tracks.size)
-        assertEquals(2, result.people.size)
-        assertTrue(result.tracks[0].detectedTimes().last() < at30(40) + 1_200_000)
+        assertNoStrangerUnderThePerson(result, firstPersonUntil = at30(40))
+        assertEquals(result.tracks.size, result.people.size)
+        assertTrue(result.tracks.last().detectedTimes().first() < at30(40) + 1_200_000)
         assertEquals(1, scan.thumbnails.live[result.tracks[0].thumbnailHandle])
-        assertEquals(2, scan.thumbnails.live[result.tracks[1].thumbnailHandle])
+        assertEquals(2, scan.thumbnails.live[result.tracks.last().thumbnailHandle])
     }
 
     @Test

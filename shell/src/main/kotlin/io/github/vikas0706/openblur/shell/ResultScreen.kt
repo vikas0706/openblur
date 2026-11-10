@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -90,6 +91,10 @@ private fun SavedResult(
     } else {
         16f / 9f
     }
+    // Rotating a phone switches between the two layouts; moving the player keeps it playing where it was.
+    val player = remember(report.outputUri, aspect) {
+        movableContentOf { bounds: Modifier -> SavedVideoPlayer(report.outputUri, aspect, bounds) }
+    }
     Column(modifier.fillMaxSize().background(OpenBlurTheme.colors.surface)) {
         TopBar(title = stringResource(R.string.result_saved_title), onBack = onBackToEditor)
         BoxWithConstraints(
@@ -110,7 +115,7 @@ private fun SavedResult(
                         modifier = Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(OpenBlurDimens.ItemGap),
                     ) {
-                        SavedVideoPlayer(report.outputUri, aspect, Modifier.heightIn(max = availableHeight * 0.6f))
+                        player(Modifier.heightIn(max = availableHeight * 0.6f))
                     }
                     Column(
                         modifier = Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
@@ -129,11 +134,7 @@ private fun SavedResult(
                             .padding(OpenBlurDimens.ScreenPadding),
                         verticalArrangement = Arrangement.spacedBy(OpenBlurDimens.ItemGap),
                     ) {
-                        SavedVideoPlayer(
-                            uri = report.outputUri,
-                            aspect = aspect,
-                            modifier = Modifier.heightIn(max = (availableHeight * 0.5f).coerceAtLeast(160.dp)),
-                        )
+                        player(Modifier.heightIn(max = (availableHeight * 0.5f).coerceAtLeast(160.dp)))
                         SavedDetails(report, canReturnToEditor, onBackToEditor, onBlurAnother)
                     }
                 }

@@ -19,8 +19,9 @@ import kotlin.math.min
 class BinaryAnalysisResultCodec : AnalysisResultCodec {
     /** Throws [IllegalArgumentException] for a result that breaks the [FaceTrack] contract and could not be read back. */
     override fun write(result: AnalysisResult, out: OutputStream) {
+        require(result.frameWidth > 0 && result.frameHeight > 0) { "frame size ${result.frameWidth}x${result.frameHeight}" }
         for (track in result.tracks) {
-            val problem = problemWith(track.timesUs, track.boxes.size, track.eyes.size, track.sampleKinds.size)
+            val problem = problemWith(track.timesUs, track.boxes, track.eyes.size, track.sampleKinds.size)
             require(problem == null) { "track ${track.id}: $problem" }
         }
         val writer = Writer(out)
@@ -66,6 +67,7 @@ class BinaryAnalysisResultCodec : AnalysisResultCodec {
         reader.fill(HEADER_BYTES)
         val frameWidth = reader.int()
         val frameHeight = reader.int()
+        if (frameWidth <= 0 || frameHeight <= 0) throw IOException("frame size ${frameWidth}x$frameHeight")
         val durationUs = reader.long()
         val framesSeen = reader.int()
         val framesDetected = reader.int()
@@ -87,7 +89,7 @@ class BinaryAnalysisResultCodec : AnalysisResultCodec {
             val boxes = reader.floats(samples * 4)
             val eyes = reader.floats(samples * 4)
             val kinds = reader.bytes(samples)
-            val problem = problemWith(timesUs, boxes.size, eyes.size, kinds.size)
+            val problem = problemWith(timesUs, boxes, eyes.size, kinds.size)
             if (problem != null) throw IOException("track $id: $problem")
             tracks.add(FaceTrack(id, personId, timesUs, boxes, eyes, kinds, thumbnailHandle, meanScore))
         }
@@ -109,12 +111,16 @@ class BinaryAnalysisResultCodec : AnalysisResultCodec {
     }
 
     /** The one rule set shared by both directions, so nothing can be written that would be refused on reading. */
-    private fun problemWith(timesUs: LongArray, boxValues: Int, eyeValues: Int, kinds: Int): String? {
+    private fun problemWith(timesUs: LongArray, boxes: FloatArray, eyeValues: Int, kinds: Int): String? {
         val n = timesUs.size
         if (n < 2) return "has $n samples, a track needs at least two"
-        if (boxValues.toLong() != n * 4L || eyeValues.toLong() != n * 4L || kinds != n) return "array sizes do not match $n samples"
+        if (boxes.size.toLong() != n * 4L || eyeValues.toLong() != n * 4L || kinds != n) return "array sizes do not match $n samples"
         for (i in 1 until n) {
             if (timesUs[i] <= timesUs[i - 1]) return "sample times do not increase at index $i"
+        }
+        // A NaN or infinite box draws no mask, so the face would be exported unblurred.
+        for (i in boxes.indices) {
+            if (!boxes[i].isFinite()) return "box value ${boxes[i]} at sample ${i / 4}"
         }
         return null
     }

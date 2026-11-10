@@ -120,11 +120,11 @@ internal class DecoderCalibration(context: Context) {
         val done = CountDownLatch(1)
         var result: FloatArray? = null
         Handler(thread.looper).post {
-            result = try {
-                decodeOnThisThread(clip, codecName, vendorKey, readYuv, colorKeys)
+            // The result is stored before the latch opens; a finally on the try expression would open it first.
+            try {
+                result = decodeOnThisThread(clip, codecName, vendorKey, readYuv, colorKeys)
             } catch (e: Exception) {
                 Log.w(TAG, "Calibration with $codecName failed", e)
-                null
             } finally {
                 done.countDown()
             }
@@ -245,7 +245,11 @@ internal class DecoderCalibration(context: Context) {
             )
             check(context != EGL14.EGL_NO_CONTEXT) { "No EGL context" }
             pbuffer = EGL14.eglCreatePbufferSurface(display, configs[0], intArrayOf(EGL14.EGL_WIDTH, 1, EGL14.EGL_HEIGHT, 1, EGL14.EGL_NONE), 0)
-            check(EGL14.eglMakeCurrent(display, pbuffer, pbuffer, context)) { "eglMakeCurrent failed" }
+            if (pbuffer == EGL14.EGL_NO_SURFACE || !EGL14.eglMakeCurrent(display, pbuffer, pbuffer, context)) {
+                // The caller only releases a fully built Egl, so a half-built one frees itself here.
+                release()
+                throw IllegalStateException("No current EGL pbuffer")
+            }
         }
 
         fun readPatches(texture: Int, matrix: FloatArray, width: Int, height: Int, readYuv: Boolean): FloatArray? {
@@ -330,8 +334,9 @@ internal class DecoderCalibration(context: Context) {
 
         fun release() {
             EGL14.eglMakeCurrent(display, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_SURFACE, EGL14.EGL_NO_CONTEXT)
-            EGL14.eglDestroySurface(display, pbuffer)
+            if (pbuffer != EGL14.EGL_NO_SURFACE) EGL14.eglDestroySurface(display, pbuffer)
             EGL14.eglDestroyContext(display, context)
+            EGL14.eglReleaseThread()
         }
     }
 

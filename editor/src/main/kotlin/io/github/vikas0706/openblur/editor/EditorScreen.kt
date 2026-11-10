@@ -3,6 +3,8 @@ package io.github.vikas0706.openblur.editor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -43,6 +45,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -82,6 +85,7 @@ import io.github.vikas0706.openblur.designsystem.OpenBlurShapes
 import io.github.vikas0706.openblur.designsystem.OpenBlurTheme
 import io.github.vikas0706.openblur.designsystem.PrimaryButton
 import io.github.vikas0706.openblur.designsystem.TopBar
+import io.github.vikas0706.openblur.designsystem.openBlurIndication
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -128,7 +132,7 @@ fun EditorScreen(
             onPlayingChanged = vm::onPlayingChanged,
         )
     }
-    val saver = remember(project.id, services.projects) { EditSaver(services.projects, project.id, project.edit) }
+    val saver = rememberEditSaver(vm, project, services.projects)
     val thumbnails = remember(project.id, services.projects) { ThumbnailCache(services.projects.thumbnails(project.id)) }
     var timeline by remember(vm) { mutableStateOf<MaskTimeline?>(null) }
     var previewStale by remember(vm) { mutableStateOf(false) }
@@ -424,14 +428,18 @@ private fun OverflowMenu(onRescan: () -> Unit) {
             shadowElevation = 0.dp,
             border = BorderStroke(1.dp, colors.outlineStrong),
         ) {
+            val itemInteraction = remember { MutableInteractionSource() }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.editor_rescan), style = MaterialTheme.typography.bodyLarge) },
                 onClick = {
                     open = false
                     onRescan()
                 },
+                // Material's own focus highlight is too faint on this surface; the design system ring is not.
+                modifier = Modifier.indication(itemInteraction, openBlurIndication(RectangleShape)),
                 leadingIcon = { Icon(OpenBlurIcons.Rescan, contentDescription = null, modifier = Modifier.size(24.dp)) },
                 colors = MenuDefaults.itemColors(textColor = colors.text, leadingIconColor = colors.text),
+                interactionSource = itemInteraction,
             )
         }
     }
@@ -447,8 +455,9 @@ private fun SaveFailedNotice(saver: EditSaver) {
 /** Says each edit aloud for screen readers, since most of them show only as a change in the picture. */
 @Composable
 private fun Announcer(announcement: Announcement?) {
-    val event = announcement?.event ?: return
+    val event = announcement?.event
     val text = when (event) {
+        null -> ""
         is EditorEvent.PersonBlur -> stringResource(
             when (event.choice) {
                 BlurChoice.ALL -> R.string.editor_said_person_blurred
@@ -475,12 +484,14 @@ private fun Announcer(announcement: Announcement?) {
         EditorEvent.Undone -> stringResource(R.string.editor_said_undone)
         EditorEvent.Redone -> stringResource(R.string.editor_said_redone)
     }
+    val spoken = liveRegionText(text, announcement?.serial ?: 0)
+    // Always present: a live region speaks when its text changes, not when the node first appears.
     Box(
         modifier = Modifier
             .size(1.dp)
             .semantics {
                 liveRegion = LiveRegionMode.Polite
-                contentDescription = text
+                contentDescription = spoken
             },
     )
 }
@@ -489,28 +500,52 @@ private fun Announcer(announcement: Announcement?) {
 internal class EditorSessionHolder : ViewModel() {
     private var projectId: String? = null
     private var session: EditorViewModel? = null
+    private var saver: EditSaver? = null
 
     fun sessionFor(project: Project): EditorViewModel {
         val existing = session
         // A new scan of the same project makes a new result object, and the old session's choices no longer fit it.
         if (existing != null && projectId == project.id && existing.result === project.result) return existing
+        saver = null
         return newSession(project).also {
             session = it
             projectId = project.id
         }
     }
+
+    /**
+     * The session's saver, kept with it: a reused session can hold a newer edit than the one the host passes in,
+     * so a fresh saver would take [saved] for what the store holds and skip an undo back to it.
+     */
+    fun saverFor(projects: ProjectStore, projectId: String, saved: EditState): EditSaver {
+        saver?.let { if (it.writesTo(projects, projectId)) return it }
+        return EditSaver(projects, projectId, saved).also { saver = it }
+    }
 }
 
 private fun newSession(project: Project) = EditorViewModel(project.result, project.edit, project.info.frameRate)
+
+private const val HOLDER_KEY = "openblur.editor"
 
 @Composable
 private fun rememberEditorViewModel(project: Project): EditorViewModel {
     val owner = LocalViewModelStoreOwner.current
     return if (owner != null) {
-        val holder: EditorSessionHolder = viewModel(viewModelStoreOwner = owner, key = "openblur.editor") { EditorSessionHolder() }
+        val holder: EditorSessionHolder = viewModel(viewModelStoreOwner = owner, key = HOLDER_KEY) { EditorSessionHolder() }
         remember(holder, project.id, project.result) { holder.sessionFor(project) }
     } else {
         remember(project.id, project.result) { newSession(project) }
+    }
+}
+
+@Composable
+private fun rememberEditSaver(vm: EditorViewModel, project: Project, projects: ProjectStore): EditSaver {
+    val owner = LocalViewModelStoreOwner.current
+    return if (owner != null) {
+        val holder: EditorSessionHolder = viewModel(viewModelStoreOwner = owner, key = HOLDER_KEY) { EditorSessionHolder() }
+        remember(holder, vm, project.id, projects) { holder.saverFor(projects, project.id, project.edit) }
+    } else {
+        remember(vm, project.id, projects) { EditSaver(projects, project.id, project.edit) }
     }
 }
 
@@ -521,6 +556,8 @@ internal class EditSaver(private val projects: ProjectStore, private val project
 
     private val mutex = Mutex()
     private var lastSaved = saved
+
+    fun writesTo(projects: ProjectStore, projectId: String): Boolean = this.projects === projects && this.projectId == projectId
 
     suspend fun save(edit: EditState) {
         // A write that has started runs to its end, so a newer edit never cancels it halfway through the file.
