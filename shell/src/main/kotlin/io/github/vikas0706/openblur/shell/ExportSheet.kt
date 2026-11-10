@@ -199,13 +199,13 @@ private fun PlanSummary(info: SourceVideoInfo, plan: EncodePlan) {
         InfoRow(stringResource(R.string.fact_frame_rate), Labels.frameRate(resources, info.frameRate))
         InfoRow(stringResource(R.string.fact_codec), Formats.videoCodec(plan.mimeType))
         InfoRow(
-            stringResource(R.string.fact_bitrate),
+            stringResource(R.string.sheet_target_bitrate),
             if (plan.bitrate > 0) Labels.about(resources, Labels.bitrate(resources, plan.bitrate))
             else stringResource(R.string.value_unknown),
         )
         InfoRow(
             stringResource(R.string.fact_estimated_size),
-            if (estimatedBytes > 0L) Labels.about(resources, Labels.fileSize(resources, estimatedBytes))
+            if (estimatedBytes > 0L) resources.getString(R.string.sheet_size_up_to, Labels.fileSize(resources, estimatedBytes))
             else stringResource(R.string.value_unknown),
         )
         InfoRow(

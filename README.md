@@ -5,9 +5,10 @@ OpenBlur blurs the faces you choose in a video, on your Android phone. It finds 
 The app has no network permission, so it cannot upload your video. You can check this in Android's app info screen under Permissions.
 
 <p>
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="200" alt="The editor with three faces blurred">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="200" alt="Choosing a blur style">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="200" alt="The saved copy compared with the original">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="200" alt="The editor after a scan, with every face blurred and the people found listed below the video">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="200" alt="One person tapped to stay visible while the others stay blurred">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="200" alt="The Style tab with mosaic chosen instead of blur">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="200" alt="The saved copy next to the original, with resolution, frame rate, codec, bitrate, audio and size for each">
 </p>
 
 ## What it does

@@ -30,6 +30,8 @@
     <string name="fact_file_size">File size</string>
     <string name="fact_hdr">HDR</string>
     <string name="fact_estimated_size">Estimated size</string>
+    <string name="sheet_target_bitrate">Target bitrate</string>
+    <string name="sheet_size_up_to">up to about %1$s</string>
 
     <string name="hdr_none">No</string>
     <string name="hdr_hlg">HLG</string>
@@ -118,8 +120,8 @@
     <string name="sheet_quality_heading">Quality</string>
     <string name="sheet_quality_match">Match the original</string>
     <string name="sheet_quality_maximum">Higher bitrate</string>
-    <string name="sheet_quality_match_text">Uses a bitrate a little above the original.</string>
-    <string name="sheet_quality_maximum_text">Uses about twice the original bitrate. The file is larger.</string>
+    <string name="sheet_quality_match_text">Aims a little above the original bitrate. Most phones use less than the target on easy footage, so the copy is often smaller.</string>
+    <string name="sheet_quality_maximum_text">Aims at about twice the original bitrate. The file is larger.</string>
     <string name="sheet_remove_location">Remove location data</string>
     <string name="sheet_remove_location_text">The original records where it was filmed. Turn this on to leave that out of the copy.</string>
     <string name="sheet_nothing_blurred">Nothing is set to blur. The copy would show everything the original shows.</string>
@@ -203,7 +205,7 @@
     <string name="failure_encoder">This phone\'s video encoder stopped during the export.</string>
     <string name="failure_encoder_advice">Close other apps that use the camera or record video, then export again.</string>
     <string name="failure_space">The phone ran out of storage space.</string>
-    <string name="failure_space_advice">Free some space, then export again. The save sheet shows the estimated file size.</string>
+    <string name="failure_space_advice">Free some space, then export again. The save sheet shows the largest size to expect.</string>
     <string name="failure_save">The finished video could not be written to this phone\'s video library.</string>
     <string name="failure_save_advice">Check that storage is available and that OpenBlur is allowed to save files, then export again.</string>
     <string name="failure_time">Android stopped the export because it ran longer than the system allows in the background.</string>

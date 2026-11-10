@@ -342,7 +342,7 @@ class ShellFlowTest {
         assertText("29.97 fps")
         assertText("H.264 (AVC)")
         assertText("about 12.0 Mbps")
-        assertText("about 46.5 MB")
+        assertText("up to about 46.5 MB")
         assertText(string(R.string.sheet_audio_copied))
         assertText(string(R.string.notice_codec_h264))
         assertText(string(R.string.notice_slow))
