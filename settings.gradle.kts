@@ -33,4 +33,5 @@ include(
     ":export",
     ":designsystem",
     ":editor",
+    ":shell",
 )

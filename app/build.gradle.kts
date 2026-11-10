@@ -91,6 +91,7 @@ dependencies {
     implementation(project(":export"))
     implementation(project(":designsystem"))
     implementation(project(":editor"))
+    implementation(project(":shell"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
